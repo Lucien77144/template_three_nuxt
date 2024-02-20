@@ -14,6 +14,7 @@ import {
   WebGLRenderer,
   sRGBEncoding,
 } from 'three'
+import { TRANSITIONS } from './Utils/SceneManager'
 
 export default class Renderer {
   /**
@@ -94,6 +95,15 @@ export default class Renderer {
           uScene2: {
             value: this.rt1.texture,
           },
+          uTransition: {
+            value: TRANSITIONS.FADE,
+          },
+          uDuration: {
+            value: 0,
+          },
+          uStart: {
+            value: 0,
+          },
           uTime: { value: 0 },
         },
         vertexShader,
@@ -139,7 +149,6 @@ export default class Renderer {
    */
   _renderTargets() {
     // Get elements from experience
-    // this.scene = this.experience.sceneManager
     const active = this.sceneManager.active
     const next = this.sceneManager.next
 
@@ -149,7 +158,6 @@ export default class Renderer {
 
     // Transition
     if (next) {
-      console.log(next);
       this.instance.setRenderTarget(this.rt1)
       this.instance.render(next.scene, next.camera.instance)
     }

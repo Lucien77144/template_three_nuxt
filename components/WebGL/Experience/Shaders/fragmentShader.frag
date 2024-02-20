@@ -1,6 +1,9 @@
 uniform sampler2D uScene1;
 uniform sampler2D uScene2;
 uniform float uTime;
+uniform float uTransition;
+uniform float uDuration;
+uniform float uStart;
 varying vec2 vUv;
 
 float clampedSine(float t, float magnitude) {
@@ -37,5 +40,6 @@ void main() {
     vec4 scene1 = texture2D(uScene1, uv);
     vec4 scene2 = texture2D(uScene2, uv);
 
-    gl_FragColor = mix(scene1, scene2, round(uv.x));
+    float t = (uTime - uStart) / uDuration;
+    gl_FragColor = mix(scene1, scene2, t);
 }

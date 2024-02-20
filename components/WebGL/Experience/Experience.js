@@ -76,21 +76,19 @@ export default class Experience {
     this.time = new Time()
     this.sceneManager = new SceneManager()
     this.stats = new Stats(this.config.debug)
-    this.sizes = new Sizes()
     this.renderer = new Renderer()
+    this.sizes = new Sizes()
     this.resources = new Resources()
 
     this.resources.on('end', () => {
       this.sceneManager.init()
-      console.log('init');
 
       setTimeout(() => {
+        console.log('switch')
         this.sceneManager.switch('world2')
       }, 1000)
 
-      setTimeout(() => {
-        this._update()
-      })
+      this._update()
     })
 
     this.sizes.on('resize', () => {

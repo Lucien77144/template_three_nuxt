@@ -2,6 +2,10 @@ import World from '../Scenes/World'
 import World2 from '../Scenes/World2'
 import Experience from '../Experience'
 
+export const TRANSITIONS = {
+  FADE: 0,
+}
+
 export default class SceneManager {
   /**
    * Constructor
@@ -17,31 +21,29 @@ export default class SceneManager {
       default: World,
       world2: World2,
     }
-    this.transitionList = {
-      default: World,
-    }
+    this.renderMesh = null
     this.active = null
     this.next = null
   }
 
   /**
    * Switch scene
+   * @param {string} destination Destination scene
+   * @param {number} transition Transition type
+   * @param {number} duration Transition duration
    */
-  switch(destination = 'default', transition = 'default', duration = 1000) {
+  switch(
+    destination = 'default',
+    transition = TRANSITIONS.FADE,
+    duration = 2000
+  ) {
     if (this.next) return
+    this.renderMesh ??= this.experience.renderer.renderMesh
+
     this.next = new this.sceneList[destination]()
-    this.transition = {
-      shaders: this.transitionList[transition],
-      duration,
-      startTime: this.time.elapsed,
-    }
-
-    // {
-    //   duration,
-    //   startTime: this.time.elapsed,
-    // }
-
-    console.log(this.next)
+    this.renderMesh.material.uniforms.uTransition.value = transition
+    this.renderMesh.material.uniforms.uDuration.value = duration
+    this.renderMesh.material.uniforms.uStart.value = this.time.elapsed
   }
 
   /**
@@ -56,7 +58,18 @@ export default class SceneManager {
    * Update
    */
   update() {
+    if (this.next) {
+      const duration = this.renderMesh.material.uniforms.uDuration.value
+      const start = this.renderMesh.material.uniforms.uStart.value
+
+      if (start + duration < this.time.elapsed) {
+        this.active = this.next
+        this.next = null
+      }
+    }
+
     this.active?.update()
+    this.next?.update()
   }
 
   /**
@@ -64,5 +77,6 @@ export default class SceneManager {
    */
   destroy() {
     this.active?.destroy()
+    this.next?.destroy()
   }
 }
