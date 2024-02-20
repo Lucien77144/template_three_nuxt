@@ -6,6 +6,11 @@ uniform float uDuration;
 uniform float uStart;
 varying vec2 vUv;
 
+float cubicBezier(float t, float a, float b, float c, float d) {
+    float tt = t*t, ttt = tt*t;
+    return a + (b*t) + (c*tt) + (d*ttt);
+}
+
 float clampedSine(float t, float magnitude) {
     return (1. + cos(t)) / 2. * magnitude; 
 }
@@ -41,5 +46,8 @@ void main() {
     vec4 scene2 = texture2D(uScene2, uv);
 
     float t = (uTime - uStart) / uDuration;
-    gl_FragColor = mix(scene1, scene2, t);
+    float factor = cubicBezier(t, .0, 1., 1., -1.);
+
+    gl_FragColor.rgb = mix(scene1.rgb, scene2.rgb, clamp(factor, 0., 1.));
+    gl_FragColor.a = 1.;
 }

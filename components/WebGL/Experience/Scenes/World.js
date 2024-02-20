@@ -43,6 +43,13 @@ export default class World {
   }
 
   /**
+   * Resize the world
+   */
+  resize() {
+    this.camera.resize()
+  }
+
+  /**
    * Dispose the world
    */
   dispose() {

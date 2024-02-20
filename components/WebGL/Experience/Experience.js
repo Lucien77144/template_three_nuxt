@@ -28,7 +28,6 @@ export default class Experience {
     this.debug = null
     this.stats = null
     this.sceneManager = null
-    this.camera = null
     this.renderer = null
     this.time = null
     this.resources = null
@@ -85,7 +84,7 @@ export default class Experience {
 
       setTimeout(() => {
         console.log('switch')
-        this.sceneManager.switch('world2')
+        // this.sceneManager.switch('world2')
       }, 1000)
 
       this._update()
@@ -103,7 +102,7 @@ export default class Experience {
     this._setConfig()
 
     this.renderer.resize()
-    this.camera.resize()
+    this.sceneManager.resize()
   }
 
   /**

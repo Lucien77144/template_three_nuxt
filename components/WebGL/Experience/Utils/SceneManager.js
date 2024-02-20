@@ -73,6 +73,14 @@ export default class SceneManager {
   }
 
   /**
+   * Resize
+   */
+  resize() {
+    this.active?.resize()
+    this.next?.resize()
+  }
+
+  /**
    * Destroy
    */
   destroy() {

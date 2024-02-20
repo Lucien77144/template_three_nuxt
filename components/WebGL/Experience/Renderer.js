@@ -99,7 +99,7 @@ export default class Renderer {
             value: TRANSITIONS.FADE,
           },
           uDuration: {
-            value: 0,
+            value: 1,
           },
           uStart: {
             value: 0,
