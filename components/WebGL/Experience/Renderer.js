@@ -4,15 +4,16 @@ import vertexShader from './Shaders/vertexShader.vert?raw'
 import fragmentShader from './Shaders/fragmentShader.frag?raw'
 import {
   LinearFilter,
+  LinearSRGBColorSpace,
   Mesh,
   NoToneMapping,
   PlaneGeometry,
   RGBAFormat,
   SRGBColorSpace,
   ShaderMaterial,
+  Vector2,
   WebGLRenderTarget,
   WebGLRenderer,
-  sRGBEncoding,
 } from 'three'
 import { TRANSITIONS } from './Utils/SceneManager'
 
@@ -69,15 +70,16 @@ export default class Renderer {
    * Set render targets and mesh
    */
   _setRenderTargets() {
-    this.rt0 = new WebGLRenderTarget(this.config.width, this.config.height, {
-      generateMipmaps: false,
+    const size = this.instance.getDrawingBufferSize(new Vector2())
+    // this.rt0 = new WebGLRenderTarget(this.config.width, this.config.height, {
+    this.rt0 = new WebGLRenderTarget(size.width, size.height, {
       minFilter: LinearFilter,
       magFilter: LinearFilter,
       format: RGBAFormat,
-      encoding: sRGBEncoding,
-      samples: 1,
-      stencilBuffer: true,
+      stencilBuffer: false,
+      samples: 4,
     })
+
     this.rt1 = this.rt0.clone()
   }
 
@@ -119,7 +121,7 @@ export default class Renderer {
     // Renderer
     this.instance = new WebGLRenderer({
       antialias: true,
-      alpha: true,
+      alpha: false,
       powerPreference: 'high-performance',
     })
 

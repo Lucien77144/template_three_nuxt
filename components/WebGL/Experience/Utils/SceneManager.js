@@ -1,6 +1,6 @@
-import World from '../Scenes/World'
-import World2 from '../Scenes/World2'
 import Experience from '../Experience'
+import Scene1 from '../Scenes/Scene1'
+import Scene2 from '../Scenes/Scene2'
 
 export const TRANSITIONS = {
   FADE: 0,
@@ -18,8 +18,8 @@ export default class SceneManager {
 
     // New elements
     this.sceneList = {
-      default: World,
-      world2: World2,
+      default: Scene1,
+      world2: Scene2,
     }
     this.renderMesh = null
     this.active = null

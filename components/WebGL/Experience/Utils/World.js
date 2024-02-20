@@ -1,5 +1,3 @@
-import Experience from '../Experience'
-import Floor from '../Components/Floor/Floor'
 import { Scene } from 'three'
 import Camera from '../Camera'
 
@@ -8,18 +6,9 @@ export default class World {
    * Constructor
    */
   constructor() {
-    // Get elements from experience
-    this.experience = new Experience()
-
-    // New elements
-    this.components = {
-      floor: new Floor(),
-    }
     this.scene = new Scene()
     this.camera = new Camera()
-
-    // Init
-    this._init()
+    this.components = null
   }
 
   /**

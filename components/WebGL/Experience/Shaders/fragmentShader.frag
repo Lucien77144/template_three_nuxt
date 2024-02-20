@@ -48,6 +48,5 @@ void main() {
     float t = (uTime - uStart) / uDuration;
     float factor = cubicBezier(t, .0, 1., 1., -1.);
 
-    gl_FragColor.rgb = mix(scene1.rgb, scene2.rgb, clamp(factor, 0., 1.));
-    gl_FragColor.a = 1.;
+    gl_FragColor = mix(scene1, scene2, factor);
 }
