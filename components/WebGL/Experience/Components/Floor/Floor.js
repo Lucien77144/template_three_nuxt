@@ -1,4 +1,4 @@
-import { Mesh, MeshBasicMaterial, PlaneGeometry } from 'three'
+import * as THREE from 'three'
 
 export default class Floor {
   /**
@@ -18,21 +18,21 @@ export default class Floor {
    * Get geometry
    */
   _setGeometry() {
-    this.geometry = new PlaneGeometry(10, 10)
+    this.geometry = new THREE.PlaneGeometry(10, 10)
   }
 
   /**
    * Get material
    */
   _setMaterial() {
-    this.material = new MeshBasicMaterial({ color: 0x00ff00 })
+    this.material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
   }
 
   /**
    * Get mesh
    */
   _setMesh() {
-    this.item = new Mesh(this.geometry, this.material)
+    this.item = new THREE.Mesh(this.geometry, this.material)
 
     this.item.rotation.x = -Math.PI / 2
     this.item.position.y = -3
@@ -56,6 +56,7 @@ export default class Floor {
    * Dispose the floor
    */
   dispose() {
-    this.item.dispose()
+    this.geometry.dispose()
+    this.material.dispose()
   }
 }

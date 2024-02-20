@@ -1,18 +1,18 @@
-import { Scene } from 'three'
 import Camera from '../Camera'
+import * as THREE from 'three'
 
-export default class World {
+export default class Scene {
   /**
    * Constructor
    */
   constructor() {
-    this.scene = new Scene()
+    this.scene = new THREE.Scene()
     this.camera = new Camera()
     this.components = null
   }
 
   /**
-   * Update the world
+   * Update the scene
    */
   _init() {
     Object.keys(this.components).forEach((c) => {
@@ -22,7 +22,7 @@ export default class World {
   }
 
   /**
-   * Update the world
+   * Update the scene
    */
   update() {
     Object.keys(this.components).forEach((_key) => {
@@ -32,18 +32,19 @@ export default class World {
   }
 
   /**
-   * Resize the world
+   * Resize the scene
    */
   resize() {
     this.camera.resize()
   }
 
   /**
-   * Dispose the world
+   * Dispose the scene
    */
   dispose() {
     Object.keys(this.components).forEach((_key) => {
       this.components[_key].dispose()
+      this.scene.remove(this.components[_key].item) 
     })
   }
 }

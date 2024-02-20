@@ -1,20 +1,7 @@
+import * as THREE from 'three'
 import Experience from './Experience'
-
 import vertexShader from './Shaders/vertexShader.vert?raw'
 import fragmentShader from './Shaders/fragmentShader.frag?raw'
-import {
-  LinearFilter,
-  LinearSRGBColorSpace,
-  Mesh,
-  NoToneMapping,
-  PlaneGeometry,
-  RGBAFormat,
-  SRGBColorSpace,
-  ShaderMaterial,
-  Vector2,
-  WebGLRenderTarget,
-  WebGLRenderer,
-} from 'three'
 import { TRANSITIONS } from './Utils/SceneManager'
 
 export default class Renderer {
@@ -32,6 +19,7 @@ export default class Renderer {
 
     // New elements
     this.instance = null
+    this.camera = null
     this.rt0 = null
     this.rt1 = null
     this.renderMesh = null
@@ -67,15 +55,26 @@ export default class Renderer {
   }
 
   /**
+   * Set the camera instance ONLY USED TO RENDER THE SCENE ON THE MESH
+   */
+  _setCamera() {
+    this.camera = new THREE.PerspectiveCamera(
+      75,
+      this.config.width / this.config.height,
+      0.1,
+      100
+    )
+  }
+
+  /**
    * Set render targets and mesh
    */
   _setRenderTargets() {
-    const size = this.instance.getDrawingBufferSize(new Vector2())
-    // this.rt0 = new WebGLRenderTarget(this.config.width, this.config.height, {
-    this.rt0 = new WebGLRenderTarget(size.width, size.height, {
-      minFilter: LinearFilter,
-      magFilter: LinearFilter,
-      format: RGBAFormat,
+    const size = this.instance.getDrawingBufferSize(new THREE.Vector2())
+    this.rt0 = new THREE.WebGLRenderTarget(size.width, size.height, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
       stencilBuffer: false,
       samples: 4,
     })
@@ -87,26 +86,16 @@ export default class Renderer {
    * Set the render mesh
    */
   _setRenderMesh() {
-    this.renderMesh = new Mesh(
-      new PlaneGeometry(2, 2),
-      new ShaderMaterial({
+    this.renderMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.ShaderMaterial({
         uniforms: {
-          uScene1: {
-            value: this.rt0.texture,
-          },
-          uScene2: {
-            value: this.rt1.texture,
-          },
-          uTransition: {
-            value: TRANSITIONS.FADE,
-          },
-          uDuration: {
-            value: 1,
-          },
-          uStart: {
-            value: 0,
-          },
-          uTime: { value: 0 },
+          uScene0: new THREE.Uniform(this.rt0.texture),
+          uScene1: new THREE.Uniform(this.rt1.texture),
+          uTransition: new THREE.Uniform(TRANSITIONS.FADE),
+          uDuration: new THREE.Uniform(1),
+          uStart: new THREE.Uniform(0),
+          uTime: new THREE.Uniform(0),
         },
         vertexShader,
         fragmentShader,
@@ -119,7 +108,7 @@ export default class Renderer {
    */
   _setInstance() {
     // Renderer
-    this.instance = new WebGLRenderer({
+    this.instance = new THREE.WebGLRenderer({
       antialias: true,
       alpha: false,
       powerPreference: 'high-performance',
@@ -132,8 +121,8 @@ export default class Renderer {
 
     // Options
     this.instance.physicallyCorrectLights = true
-    this.instance.outputColorSpace = SRGBColorSpace
-    this.instance.toneMapping = NoToneMapping
+    this.instance.outputColorSpace = THREE.SRGBColorSpace
+    this.instance.toneMapping = THREE.NoToneMapping
     this.instance.toneMappingExposure = 1
 
     // Context
@@ -166,13 +155,14 @@ export default class Renderer {
 
     // RenderMesh
     this.instance.setRenderTarget(null)
-    this.instance.render(this.renderMesh, active.camera.instance)
+    this.instance.render(this.renderMesh, this.camera)
   }
 
   /**
    * Init the renderer
    */
   _init() {
+    this._setCamera()
     this._setInstance()
     this._setRenderTargets()
     this._setRenderMesh()
@@ -196,14 +186,21 @@ export default class Renderer {
    * Resize the renderer
    */
   resize() {
+    this.camera.aspect = this.config.width / this.config.height
+    this.camera.updateProjectionMatrix()
+
     this.instance.setSize(this.config.width, this.config.height)
     this.instance.setPixelRatio(this.config.pixelRatio)
+
+    const size = this.instance.getDrawingBufferSize(new THREE.Vector2())
+    this.rt0.setSize(size.width, size.height)
+    this.rt1.setSize(size.width, size.height)
   }
 
   /**
-   * Destroy the renderer
+   * Dispose the renderer
    */
-  destroy() {
+  dispose() {
     this.instance.renderLists.dispose()
     this.instance.dispose()
     this.rt0.dispose()

@@ -81,10 +81,10 @@ export default class SceneManager {
   }
 
   /**
-   * Destroy
+   * Dispose
    */
-  destroy() {
-    this.active?.destroy()
-    this.next?.destroy()
+  dispose() {
+    this.active?.dispose()
+    this.next?.dispose()
   }
 }

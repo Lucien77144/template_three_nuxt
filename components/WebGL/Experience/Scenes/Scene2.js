@@ -1,7 +1,7 @@
 import Floor2 from '../Components/Floor2/Floor2'
-import World from '../Utils/World'
+import Scene from '../Utils/Scene'
 
-export default class Scene2 extends World {
+export default class Scene2 extends Scene {
   /**
    * Constructor
    */

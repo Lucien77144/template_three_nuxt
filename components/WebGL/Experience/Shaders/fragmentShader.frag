@@ -1,5 +1,5 @@
+uniform sampler2D uScene0;
 uniform sampler2D uScene1;
-uniform sampler2D uScene2;
 uniform float uTime;
 uniform float uTransition;
 uniform float uDuration;
@@ -42,11 +42,11 @@ float noise(in vec2 st) {
 
 void main() {
     vec2 uv = vUv;
+    vec4 scene0 = texture2D(uScene0, uv);
     vec4 scene1 = texture2D(uScene1, uv);
-    vec4 scene2 = texture2D(uScene2, uv);
 
     float t = (uTime - uStart) / uDuration;
     float factor = cubicBezier(t, .0, 1., 1., -1.);
 
-    gl_FragColor = mix(scene1, scene2, factor);
+    gl_FragColor = mix(scene0, scene1, factor);
 }

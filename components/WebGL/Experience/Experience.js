@@ -84,7 +84,7 @@ export default class Experience {
 
       setTimeout(() => {
         console.log('switch')
-        // this.sceneManager.switch('world2')
+        this.sceneManager.switch('world2')
       }, 1000)
 
       this._update()
@@ -118,11 +118,14 @@ export default class Experience {
     })
   }
 
-  destroy() {
+  /**
+   * Dispose the experience
+   */
+  dispose() {
     this.sizes.off('resize')
     this.time.stop()
-    this.renderer.destroy()
-    this.resources.destroy()
-    this.sceneManager.destroy()
+    this.renderer.dispose()
+    this.resources.dispose()
+    this.sceneManager.dispose()
   }
 }
