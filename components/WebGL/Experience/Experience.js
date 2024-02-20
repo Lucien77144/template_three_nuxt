@@ -1,12 +1,11 @@
 import Renderer from './Renderer'
 import { Pane } from 'tweakpane'
-import * as THREE from 'three'
 import Camera from './Camera'
 import Time from './Utils/Time'
 import Sizes from './Utils/Sizes'
 import Resources from './Utils/Resources'
-import World from './World'
 import Stats from './Utils/Stats'
+import SceneManager from './Utils/SceneManager'
 
 export default class Experience {
   static _instance
@@ -28,12 +27,11 @@ export default class Experience {
     this.sizes = null
     this.debug = null
     this.stats = null
-    this.scene = null
+    this.sceneManager = null
     this.camera = null
     this.renderer = null
     this.time = null
     this.resources = null
-    this.world = null
 
     // Init
     this._init()
@@ -69,30 +67,30 @@ export default class Experience {
   }
 
   /**
-   * Get scene
-   */
-  _getScene() {
-    return new THREE.Scene()
-  }
-
-  /**
    * Init the experience
    */
   _init() {
     this._setConfig()
 
     this.debug = this._getDebug()
-    this.scene = this._getScene()
+    this.time = new Time()
+    this.sceneManager = new SceneManager()
     this.stats = new Stats(this.config.debug)
     this.sizes = new Sizes()
-    this.camera = new Camera()
     this.renderer = new Renderer()
-    this.time = new Time()
     this.resources = new Resources()
 
     this.resources.on('end', () => {
-      this.world = new World()
-      this._update()
+      this.sceneManager.init()
+      console.log('init');
+
+      setTimeout(() => {
+        this.sceneManager.switch('world2')
+      }, 1000)
+
+      setTimeout(() => {
+        this._update()
+      })
     })
 
     this.sizes.on('resize', () => {
@@ -115,8 +113,7 @@ export default class Experience {
    */
   _update() {
     this.renderer.update()
-    this.camera.update()
-    this.world.update()
+    this.sceneManager.update()
     this.stats?.update()
 
     window.requestAnimationFrame(() => {
@@ -126,9 +123,9 @@ export default class Experience {
 
   destroy() {
     this.sizes.off('resize')
-    this.renderer.instance.dispose()
     this.time.stop()
+    this.renderer.destroy()
     this.resources.destroy()
-    this.world?.destroy()
+    this.sceneManager.destroy()
   }
 }
