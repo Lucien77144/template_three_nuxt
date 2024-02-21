@@ -13,6 +13,7 @@ export default class SceneManager {
   constructor() {
     // Get elements from experience
     this.experience = new Experience()
+    this.debug = this.experience.debug
     this.resources = this.experience.resources
     this.time = this.experience.time
 
@@ -21,6 +22,7 @@ export default class SceneManager {
       default: Scene1,
       world2: Scene2,
     }
+    this.debugFolder = null
     this.renderMesh = null
     this.active = null
     this.next = null
@@ -37,7 +39,6 @@ export default class SceneManager {
     transition = TRANSITIONS.FADE,
     duration = 2000
   ) {
-    if (this.next) return
     this.renderMesh ??= this.experience.renderer.renderMesh
 
     this.next = new this.sceneList[destination]()
@@ -47,11 +48,37 @@ export default class SceneManager {
   }
 
   /**
+   * Set debug
+   */
+  _setDebug(value) {
+    this.debugFolder = this.debug.addFolder({
+      title: 'Scenes',
+    })
+
+    this.debugFolder
+      .addBlade({
+        view: 'list',
+        label: 'scene',
+        options: Object.keys(this.sceneList).map((key) => ({
+          text: key,
+          value: key,
+        })),
+        value,
+      })
+      .on('change', ({ value }) => {
+        this.switch(value)
+      })
+  }
+
+  /**
    * Init scene
    * @param {string} _sceneName Scene name
    */
   init(_sceneName = 'default') {
     this.active = new this.sceneList[_sceneName]()
+
+    // Debug
+    if (this.debug) this._setDebug(_sceneName)
   }
 
   /**
@@ -63,7 +90,7 @@ export default class SceneManager {
       const duration = uniforms.uDuration.value
       const start = uniforms.uStart.value
 
-      if (start + duration < (this.time.elapsed + 1)) {
+      if (start + duration < this.time.elapsed + 1) {
         this.active = this.next
         this.next = null
       }

@@ -49,7 +49,6 @@ export default class Renderer {
           new THREE.Color(this.clearColor.color),
           this.clearColor.alpha
         )
-        console.log(this.renderMesh.material.uniforms)
       })
 
     // Panels
@@ -132,9 +131,6 @@ export default class Renderer {
     // Context
     this.context = this.instance.getContext()
 
-    // Debug
-    if (this.debug) this._setDebug()
-
     // Append canvas
     this.experience.targetElement.appendChild(this.instance.domElement)
   }
@@ -170,6 +166,9 @@ export default class Renderer {
     this._setInstance()
     this._setRenderTargets()
     this._setRenderMesh()
+
+    // Debug
+    if (this.debug) this._setDebug()
   }
 
   /**
