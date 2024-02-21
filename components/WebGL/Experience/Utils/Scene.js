@@ -8,7 +8,6 @@ export default class Scene {
   constructor() {
     this.scene = new THREE.Scene()
     this.camera = new Camera()
-    this.components = null
   }
 
   /**
@@ -44,7 +43,7 @@ export default class Scene {
   dispose() {
     Object.keys(this.components).forEach((_key) => {
       this.components[_key].dispose()
-      this.scene.remove(this.components[_key].item) 
+      this.scene.remove(this.components[_key].item)
     })
   }
 }

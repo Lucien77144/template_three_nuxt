@@ -85,7 +85,7 @@ export default class Experience {
       setTimeout(() => {
         console.log('switch')
         this.sceneManager.switch('world2')
-      }, 1000)
+      }, 2500)
 
       this._update()
     })

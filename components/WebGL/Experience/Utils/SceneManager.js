@@ -59,10 +59,11 @@ export default class SceneManager {
    */
   update() {
     if (this.next) {
-      const duration = this.renderMesh.material.uniforms.uDuration.value
-      const start = this.renderMesh.material.uniforms.uStart.value
+      const uniforms = this.renderMesh.material.uniforms
+      const duration = uniforms.uDuration.value
+      const start = uniforms.uStart.value
 
-      if (start + duration < this.time.elapsed) {
+      if (start + duration < (this.time.elapsed + 1)) {
         this.active = this.next
         this.next = null
       }

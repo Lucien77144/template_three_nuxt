@@ -26,7 +26,7 @@ export default class Renderer {
     this.context = null
     this.debugFolder = null
     this.clearColor = {
-      color: '#ff0000',
+      color: '#ff039a',
       alpha: 1,
     }
 
@@ -45,7 +45,11 @@ export default class Renderer {
     this.debugFolder
       .addBinding(this.clearColor, 'color', { view: 'color' })
       .on('change', () => {
-        this.instance.setClearColor(this.clearColor.color, 1)
+        this.instance.setClearColor(
+          new THREE.Color(this.clearColor.color),
+          this.clearColor.alpha
+        )
+        console.log(this.renderMesh.material.uniforms)
       })
 
     // Panels
