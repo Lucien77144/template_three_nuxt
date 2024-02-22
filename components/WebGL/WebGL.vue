@@ -11,7 +11,6 @@ import gsap from 'gsap'
 
 // Refs
 const loadValue = ref<number>(0)
-const exp = ref<Experience | null>(null)
 const expTargetRef = ref<HTMLElement | null>(null)
 const loaderRef = ref<HTMLElement | null>(null)
 
@@ -21,7 +20,7 @@ const loaderRef = ref<HTMLElement | null>(null)
 const startExperience = () => {
   expTargetRef.value?.style.setProperty('opacity', '1')
   loaderRef.value?.style.setProperty('opacity', '0')
-  exp.value?.start()
+  exp?.start()
 
   // Remove the ref after transition (.25s)
   setTimeout(() => {
@@ -30,21 +29,15 @@ const startExperience = () => {
 }
 
 // On component mounted, create the experience
-// let exp: Experience | null
+let exp: Experience
 onMounted(() => {
   // Create the experience
-  exp.value = new Experience({
+  exp = new Experience({
     targetElement: expTargetRef.value,
   })
-  const exp2 = new Experience({
-    targetElement: expTargetRef.value,
-  })
-
-  console.log(exp.value)
-  console.log(exp2)
 
   // On resources progress, update loadValue
-  const resources: any = exp.value.resources
+  const resources: any = exp.resources
   resources.on('progress', () => {
     gsap.timeline().to(loadValue, {
       value: (resources.loaded / resources.toLoad) * 100,
@@ -55,7 +48,7 @@ onMounted(() => {
 
   // On component unmounted, dispose the experience
   onUnmounted(() => {
-    exp.value?.dispose()
+    exp?.dispose()
   })
 })
 </script>
