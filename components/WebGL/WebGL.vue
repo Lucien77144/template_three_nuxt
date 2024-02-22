@@ -1,71 +1,75 @@
 <template>
-  <div ref="loaderRef">
-    <Loader :loadValue="loadValue" />
+  <div ref="loaderRef" class="t-25">
+    <InterfaceLoader :loadValue="loadValue" @start="startExperience" />
   </div>
-  <div ref="expRef" class="exp hidden"></div>
+  <div ref="expTargetRef" class="exp t-25" style="opacity: 0"></div>
 </template>
 
 <script setup lang="ts">
 import Experience from './Experience/Experience.js'
 import gsap from 'gsap'
 
-const loadValue = ref(0)
-
-const expRef = ref<HTMLElement | null>(null)
+// Refs
+const loadValue = ref<number>(0)
+const exp = ref<Experience | null>(null)
+const expTargetRef = ref<HTMLElement | null>(null)
 const loaderRef = ref<HTMLElement | null>(null)
 
-// Set opacity with gsap
-const setOpacity = (ref: Ref, opacity: number) => {
-  gsap.to(ref.value, {
-    opacity,
-    duration: 1,
-    ease: 'power2.easeInOut',
-    onComplete: () => {
-      if (opacity === 0) {
-        ref.value?.remove()
-      }
-    },
-  })
+/**
+ * Start the experience
+ */
+const startExperience = () => {
+  expTargetRef.value?.style.setProperty('opacity', '1')
+  loaderRef.value?.style.setProperty('opacity', '0')
+  exp.value?.start()
+
+  // Remove the ref after transition (.25s)
+  setTimeout(() => {
+    loaderRef.value?.remove()
+  }, 250)
 }
 
 // On component mounted, create the experience
+// let exp: Experience | null
 onMounted(() => {
-  const exp = new Experience({
-    targetElement: expRef.value,
+  // Create the experience
+  exp.value = new Experience({
+    targetElement: expTargetRef.value,
   })
-  const resources: any = exp.resources
+  const exp2 = new Experience({
+    targetElement: expTargetRef.value,
+  })
+
+  console.log(exp.value)
+  console.log(exp2)
 
   // On resources progress, update loadValue
+  const resources: any = exp.value.resources
   resources.on('progress', () => {
     gsap.timeline().to(loadValue, {
       value: (resources.loaded / resources.toLoad) * 100,
       duration: 1,
       ease: 'power2.inOut',
-      onComplete: () => {
-        if (loadValue.value === 100) {
-          setOpacity(expRef, 1)
-          setOpacity(loaderRef, 0)
-        }
-      },
     })
   })
 
   // On component unmounted, dispose the experience
   onUnmounted(() => {
-    exp.dispose()
+    exp.value?.dispose()
   })
 })
 </script>
 
 <style>
+.t-25 {
+  transition: 0.25s ease-in-out;
+}
+
 .exp > canvas {
   position: fixed;
   top: 0;
   left: 0;
   height: 100vh !important;
   width: 100vw !important;
-}
-.hidden {
-  opacity: 0;
 }
 </style>

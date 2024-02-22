@@ -1,6 +1,5 @@
 import Renderer from './Renderer'
 import { Pane } from 'tweakpane'
-import Camera from './Camera'
 import Time from './Utils/Time'
 import Sizes from './Utils/Sizes'
 import Resources from './Utils/Resources'
@@ -34,6 +33,20 @@ export default class Experience {
 
     // Init
     this._init()
+  }
+
+  /**
+   * Start the experience
+   */
+  start() {
+    if (
+      !this.sceneManager?.active &&
+      this.resources.toLoad === this.resources.loaded
+    ) {
+      console.log('Experience started')
+      this.sceneManager.init()
+      this._update()
+    }
   }
 
   /**
@@ -78,11 +91,6 @@ export default class Experience {
     this.renderer = new Renderer()
     this.sizes = new Sizes()
     this.resources = new Resources()
-
-    this.resources.on('end', () => {
-      this.sceneManager.init()
-      this._update()
-    })
 
     this.sizes.on('resize', () => {
       this._resize()
