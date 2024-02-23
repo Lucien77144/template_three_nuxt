@@ -36,7 +36,7 @@ const startExperience = () => {
 onMounted(() => {
   exp.value = new Experience({
     canvas: canvas.value,
-    baseScene: route.query.scene
+    baseScene: route.query.scene,
   })
 
   // On resources progress, update loadValue
@@ -56,11 +56,7 @@ onMounted(() => {
 })
 </script>
 
-<style>
-.t-25 {
-  transition: 0.25s ease-in-out;
-}
-
+<style lang="scss" scoped>
 .exp {
   position: fixed;
   top: 0;
