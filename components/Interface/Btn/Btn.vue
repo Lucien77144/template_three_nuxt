@@ -1,6 +1,6 @@
 <template>
   <div class="button">
-    <button :type="type" @click="onClick">
+    <button :type="type" @click="$emit('click', $props.value)">
       <slot />
     </button>
   </div>
@@ -9,10 +9,6 @@
 <script lang="ts" setup>
 // Emits
 const $emit = defineEmits(['click'])
-
-const onClick = () => {
-  $emit('click', $props.value)
-}
 
 // Props
 const $props = defineProps({

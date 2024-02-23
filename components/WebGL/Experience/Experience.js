@@ -19,7 +19,8 @@ export default class Experience {
     Experience._instance = this
 
     // Set container
-    this.targetElement = _options.targetElement
+    this.canvas = _options.canvas
+    this.baseScene = _options.baseScene
 
     // New elements
     this.config = {}
@@ -43,8 +44,7 @@ export default class Experience {
       !this.sceneManager?.active &&
       this.resources.toLoad === this.resources.loaded
     ) {
-      console.log('Experience started')
-      this.sceneManager.init()
+      this.sceneManager.init(this.config.debug && this.baseScene)
       this._update()
     }
   }
@@ -60,7 +60,7 @@ export default class Experience {
     this.config.pixelRatio = Math.min(Math.max(window.devicePixelRatio, 1), 2)
 
     // Width and height
-    const boundings = this.targetElement.getBoundingClientRect()
+    const boundings = this.canvas.getBoundingClientRect()
     this.config.width = boundings.width
     this.config.height = boundings.height || window.innerHeight
   }

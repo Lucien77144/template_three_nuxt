@@ -1,7 +1,7 @@
 <template>
   <div class="loader">
     <h1 ref="counter">{{ Math.floor(loadValue) }}</h1>
-    <InterfaceBtn @click="onClick"> Start </InterfaceBtn>
+    <InterfaceBtn @click="$emit('start')"> Start </InterfaceBtn>
   </div>
 </template>
 
@@ -14,15 +14,11 @@ const props = defineProps<{
 // Emits
 const $emit = defineEmits(['start'])
 
-const onClick = () => {
-  $emit('start')
-}
-
 // Watch if loadValue ends
 watch(
   () => props.loadValue == 100,
   () => {
-    console.log('Loaded')
+    // console.log('Loaded')
   }
 )
 </script>

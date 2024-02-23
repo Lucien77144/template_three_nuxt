@@ -95,9 +95,8 @@ export default class Renderer {
         uniforms: {
           uScene0: new THREE.Uniform(this.rt0.texture),
           uScene1: new THREE.Uniform(this.rt1.texture),
-          uTransition: new THREE.Uniform(TRANSITIONS.FADE),
-          uDuration: new THREE.Uniform(1),
-          uStart: new THREE.Uniform(0),
+          uTransition: new THREE.Uniform(),
+          uTemplate: new THREE.Uniform(TRANSITIONS.FADE),
           uTime: new THREE.Uniform(0),
         },
         vertexShader,
@@ -109,11 +108,14 @@ export default class Renderer {
   /**
    * Set the renderer instance
    */
-  _setInstance() {
+  _setInstance(canvas) {
     // Renderer
     this.instance = new THREE.WebGLRenderer({
-      antialias: true,
+      canvas,
+      antialias: false,
+      stencil: false,
       alpha: false,
+      depth: true,
       powerPreference: 'high-performance',
     })
 
@@ -130,9 +132,6 @@ export default class Renderer {
 
     // Context
     this.context = this.instance.getContext()
-
-    // Append canvas
-    this.experience.targetElement.appendChild(this.instance.domElement)
   }
 
   /**
@@ -163,7 +162,7 @@ export default class Renderer {
    */
   _init() {
     this._setCamera()
-    this._setInstance()
+    this._setInstance(this.experience.canvas)
     this._setRenderTargets()
     this._setRenderMesh()
 
