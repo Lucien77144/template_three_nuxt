@@ -18,6 +18,9 @@ export default class Experience {
     }
     Experience._instance = this
 
+    // Nuxt elements
+    this.$router = useRouter()
+
     // Set container
     this.canvas = _options.canvas
     this.baseScene = _options.baseScene
@@ -53,8 +56,8 @@ export default class Experience {
    * Set config
    */
   _setConfig() {
-    // Debug
-    this.config.debug = window.location.hash === '#debug'
+    // Set if Debug is on
+    this.config.debug = this.$router.currentRoute.value.href.includes('debug')
 
     // Pixel ratio
     this.config.pixelRatio = Math.min(Math.max(window.devicePixelRatio, 1), 2)
@@ -69,13 +72,12 @@ export default class Experience {
    * Get debug
    */
   _getDebug() {
-    return (
-      this.config.debug &&
-      new Pane({
-        title: 'Debug',
-        expanded: true,
-      })
-    )
+    if (!this.config.debug) return
+
+    return new Pane({
+      title: 'Debug',
+      expanded: true,
+    })
   }
 
   /**

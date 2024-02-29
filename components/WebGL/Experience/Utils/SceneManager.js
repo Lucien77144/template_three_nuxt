@@ -14,6 +14,7 @@ export default class SceneManager {
   constructor() {
     // Get elements from experience
     this.experience = new Experience()
+    this.$router = this.experience.$router
     this.debug = this.experience.debug
     this.resources = this.experience.resources
     this.time = this.experience.time
@@ -23,7 +24,6 @@ export default class SceneManager {
       default: Scene1,
       world2: Scene2,
     }
-    this.$router = useRouter()
     this.debugFolder = null
     this.renderMesh = null
     this.active = null

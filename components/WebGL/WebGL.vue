@@ -1,7 +1,4 @@
 <template>
-  <div ref="loader" class="t-25">
-    <InterfaceLoader :loadValue="loadValue" @start="startExperience" />
-  </div>
   <canvas ref="canvas" class="exp t-25" style="opacity: 0" />
 </template>
 
@@ -10,7 +7,7 @@ import Experience from './Experience/Experience.js'
 import gsap from 'gsap'
 
 // Shallow Refs
-const exp = shallowRef<Experience | null>(null)
+// const exp = shallowRef<Experience | null>(null)
 
 // Refs
 const loadValue = ref<number>(0)
