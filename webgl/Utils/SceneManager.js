@@ -102,9 +102,9 @@ export default class SceneManager {
     scroll && this.scrollManager.to(scroll)
     navigation && this.setNavigation(navigation)
 
-    navigation.scene && this.setScene(navigation.scene)
-    navigation.scale && this.setScale(navigation.scale)
-    navigation.start && this.setStart(navigation.start)
+    navigation?.scene && this.setScene(navigation.scene)
+    navigation?.scale && this.setScale(navigation.scale)
+    navigation?.start && this.setStart(navigation.start)
   }
 
   /**

@@ -26,7 +26,7 @@ export default class BaseCampCamera extends BasicItem {
       x: 0,
       y: 0,
     }
-  }getScroll
+  }
 
   /**
    * Set Name
@@ -133,7 +133,7 @@ export default class BaseCampCamera extends BasicItem {
     if (!this.scrollManager.disabled) {
       const animDuration = this.animationAction.getClip().duration
 
-      this.mixer.setTime((value * animDuration) / (100 / 3))
+      this.mixer.setTime((value * animDuration) / (100 / 2))
       this.animationAction.play()
       this.mixer.update(1 / 60)
     }
@@ -174,12 +174,13 @@ export default class BaseCampCamera extends BasicItem {
     // Set item
     this.setItem()
     this.baseCamRot = this.parentScene.camera.instance.rotation.clone()
+    this.playAnimation(0)
   }
 
   /**
    * Update
    */
   update() {
-    this.playAnimation(this.scrollManager.current)
+    this.parentScene?.playing && this.playAnimation(this.scrollManager.current)
   }
 }

@@ -1,7 +1,9 @@
 <template>
-  <div class="t-25" :class="{ disabled: !navigation.scene?.nav }">
+  <div class="t-25">
     <svg
-      class="progress"
+      class="progress t-25"
+      :class="{ disabled: !navigation.scene?.nav }"
+      ref="progressRef"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 48 424"
@@ -20,7 +22,7 @@
       </g>
       <circle
         class="pt"
-        :class="{ 'pt--active': scroll >= 1 }"
+        :class="{ 'pt--active': scroll >= 100 }"
         cx="24"
         cy="82"
         r="1"
@@ -28,7 +30,7 @@
       />
       <circle
         class="pt"
-        :class="{ 'pt--active': scroll >= 0.5 + 0.5 / 2 }"
+        :class="{ 'pt--active': scroll >= 75 }"
         cx="24"
         cy="118"
         r="1"
@@ -36,7 +38,7 @@
       />
       <circle
         class="pt"
-        :class="{ 'pt--active': scroll >= 0.51 }"
+        :class="{ 'pt--active': scroll >= 51 }"
         cx="24"
         cy="154"
         r="1"
@@ -44,7 +46,7 @@
       />
       <g
         class="grp"
-        :class="{ 'grp--active': scroll >= 0.51 }"
+        :class="{ 'grp--active': scroll >= 51 }"
         @click.stop="navigate('icefall')"
         clip-path="url(#b)"
         stroke-width="2"
@@ -62,7 +64,7 @@
       </g>
       <circle
         class="pt"
-        :class="{ 'pt--active': scroll >= (0.5 / 3) * 2 }"
+        :class="{ 'pt--active': scroll >= (50 / 3) * 2 }"
         cx="24"
         cy="270"
         r="1"
@@ -70,7 +72,7 @@
       />
       <circle
         class="pt"
-        :class="{ 'pt--active': scroll >= 0.5 / 3 }"
+        :class="{ 'pt--active': scroll >= 50 / 3 }"
         cx="24"
         cy="306"
         r="1"
@@ -109,7 +111,10 @@
 <script lang="ts" setup>
 import scenes from '~/const/scenes.const'
 
-// bus event
+// Refs
+const progressRef = ref<HTMLElement | null>(null)
+
+// Bus event
 const { $bus }: any = useNuxtApp()
 
 // Props
@@ -121,7 +126,7 @@ defineProps({
 
 // Getters
 const scroll = computed(() =>
-  formatScroll(Math.round(useExperienceStore().getScroll * 1000) / 100000)
+  formatScroll(Math.round(useExperienceStore().getScroll))
 )
 const navigation = computed(() => useExperienceStore().getNavigation)
 
@@ -130,7 +135,7 @@ const navigation = computed(() => useExperienceStore().getNavigation)
  */
 function formatScroll(value: number): number {
   const total = scenes.nav.total
-  const prev = navigation.value.start / total
+  const prev = (navigation.value.start / total) * 100
 
   return (value / total) * navigation.value.scale + prev
 }
@@ -145,6 +150,9 @@ function navigate(name: string) {
   if (scene?.name === next?.name) return
   scene && $bus.emit('scene:switch', next)
 }
+
+// Events
+$bus.on('modal:init', () => progressRef.value?.classList.add('disabled'))
 </script>
 
 <style src="./style.scss" lang="scss" scoped></style>

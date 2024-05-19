@@ -1,23 +1,23 @@
 <template>
-  <div v-if="!disabled" class="subtitles">
-    <div class="subtitles__wrapper">
-      <div v-for="s in subtitles" class="subtitles__item">
-        {{ s.text }}
+  <div v-if="subtitles?.length > 0 && !disabled" class="subtitles">
+    <div class="subtitles__container">
+      <div class="subtitles__wrapper">
+        <div v-for="s in subtitles" class="subtitles__item">
+          {{ s.text }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-// Cues
-const subtitles = computed(() => useSubtitlesStore().getCues)
+// Store
 const disabled = computed(() => useSubtitlesStore().getDisabled)
-const isDisabled = ref(false)
 
-// Watch
-watch(disabled, (val) => {
-  isDisabled.value = val
-})
+// Cues
+const subtitles = computed(() =>
+  Object.values({ ...useSubtitlesStore().getCues })
+) as Ref<VTTCue[]>
 </script>
 
 <style src="./style.scss" lang="scss" scoped></style>
