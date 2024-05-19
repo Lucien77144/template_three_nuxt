@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     },
   },
   modules: [
+    '@pinia/nuxt',
     [
       '@nuxtjs/i18n',
       {
@@ -27,16 +28,16 @@ export default defineNuxtConfig({
           },
         ],
         detectBrowserLanguage: true, // use default language of browser
-        langDir: 'lang/', // source of translations
+        langDir: './assets/data/lang/', // source of translations
         strategy: 'no_prefix', // don't add language to url
       },
     ],
   ],
   components: [
     {
-      path: '~/components/Interface/Components',
+      path: '~/components/_UI',
       pathPrefix: false,
-      prefix: 'I',
+      prefix: 'UI',
     },
     '~/components',
   ],
