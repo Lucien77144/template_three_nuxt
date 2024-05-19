@@ -19,10 +19,14 @@ export default class AudioManager {
    */
   setDebug(title, audio) {
     // Folder
-    this.debugFolder ??= this.debug.addFolder({ title: 'Audio' })
+    this.debugFolder ??= this.debug.panel.addFolder({
+      expanded: false,
+      title: 'Audio',
+    })
 
     // Subfolder
     const sub = this.debugFolder.addFolder({
+      expanded: false,
       title: `${audio.parent ? '🔗 - ' : ''}${title}`,
       expanded: audio.isPlaying,
     })
@@ -125,7 +129,7 @@ export default class AudioManager {
     delete this.audios[name]
 
     if (Object.keys(this.audios).length == 0) {
-      this.debug?.remove(this.debugFolder)
+      this.debug?.panel.remove(this.debugFolder)
       this.debugFolder = null
     }
   }
@@ -134,7 +138,7 @@ export default class AudioManager {
    * Dispose the audio manager
    */
   dispose() {
-    this.debugFolder && this.debug?.remove(this.debugFolder)
+    this.debugFolder && this.debug?.panel.remove(this.debugFolder)
 
     Object.keys(this.audios).forEach((name) => this.remove(name))
   }

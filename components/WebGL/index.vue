@@ -1,11 +1,11 @@
 <template>
   <!-- Loader & Landing -->
   <WebGLLoader />
-  <WebGLLanding v-if="exp && !exp.active" />
+  <WebGLLanding v-if="!active && landing" />
   <!--/ Loader & Landing -->
 
   <!-- Content front of the experience -->
-  <WebGLInterfaceFront v-if="exp?.active" :exp="exp" />
+  <WebGLInterfaceFront v-if="active" />
   <!--/ Content front of the experience -->
 
   <!-- CSS renderers -->
@@ -21,7 +21,7 @@
   <!--/ Canvas & Debug panel -->
 
   <!-- Content in the background of the experience -->
-  <WebGLInterfaceBack v-if="exp?.active" :exp="exp" />
+  <WebGLInterfaceBack v-if="active" />
   <!--/ Content in the background of the experience -->
 </template>
 
@@ -36,6 +36,10 @@ const debugRef = ref<HTMLElement | null>(null)
 
 // Route
 const route = useRoute()
+
+// Store
+const active = computed(() => useExperienceStore().getActive)
+const landing = computed(() => useExperienceStore().getLanding)
 
 // On component mounted, create the experience
 onMounted(() => {

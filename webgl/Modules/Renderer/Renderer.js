@@ -59,7 +59,8 @@ export default class Renderer {
    * Set debug
    */
   setDebug() {
-    this.debugFolder = this.debug.addFolder({
+    this.debugFolder = this.debug.panel.addFolder({
+      expanded: false,
       title: 'Renderer',
     })
 
@@ -131,6 +132,11 @@ export default class Renderer {
           // Focus
           uFocColor: new Uniform(new Color('#f1dad2')),
           uFocProgress: new Uniform(0),
+
+          // Data modal
+          uModalColor: new Uniform(new Color('#0d1a48')),
+          uModalProgress: new Uniform(0),
+          uBlob: new Uniform(),
 
           // Time
           uTime: new Uniform(0),

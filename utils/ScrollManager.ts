@@ -75,10 +75,13 @@ export default class ScrollManager extends EventEmitter {
   /**
    * Go to a scroll position instantly
    * @param val Scroll position
+   * @param instant If set to true, the scroll will be instant (default: true)
    */
-  public to(val: number) {
+  public to(val: number, instant: boolean = true) {
     this.target = val
-    this.current = val
+    if (instant) {
+      this.current = val
+    }
   }
 
   // ---------------------

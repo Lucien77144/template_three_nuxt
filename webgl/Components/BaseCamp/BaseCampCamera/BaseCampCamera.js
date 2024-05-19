@@ -1,7 +1,7 @@
-import { AnimationMixer, MathUtils, Vector3 } from 'three'
+import { AnimationMixer } from 'three'
 import BasicItem from '~/webgl/Modules/Basics/BasicItem'
 
-export default class BaseCampItem extends BasicItem {
+export default class BaseCampCamera extends BasicItem {
   /**
    * Constructor
    */
@@ -9,6 +9,9 @@ export default class BaseCampItem extends BasicItem {
     super()
 
     this.options = _options
+
+    // Get elements from experience
+    this.scrollManager = this.experience.scrollManager
 
     // New elements
     this.name = null
@@ -23,13 +26,7 @@ export default class BaseCampItem extends BasicItem {
       x: 0,
       y: 0,
     }
-
-    // Store
-    this.currentScroll = computed(
-      () => Math.round(useScrollStore().getCurrent * 10000) / 10000
-    )
-    this.getDisabledScroll = computed(() => useScrollStore().getDisable)
-  }
+  }getScroll
 
   /**
    * Set Name
@@ -133,7 +130,7 @@ export default class BaseCampItem extends BasicItem {
   playAnimation(value) {
     if (!this.mixer || !this.item || !this.parentScene.camera.instance) return
 
-    if (!this.getDisabledScroll.value) {
+    if (!this.scrollManager.disabled) {
       const animDuration = this.animationAction.getClip().duration
 
       this.mixer.setTime((value * animDuration) / (100 / 3))
@@ -183,6 +180,6 @@ export default class BaseCampItem extends BasicItem {
    * Update
    */
   update() {
-    this.playAnimation(this.currentScroll.value)
+    this.playAnimation(this.scrollManager.current)
   }
 }

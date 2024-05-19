@@ -108,6 +108,24 @@ export default class BasicScene {
   // --------------------------------
 
   /**
+   * Set debug
+   */
+  setDebug() {
+    this.debugFolder = this.debug.panel.addFolder({
+      expanded: false,
+      title: 'Scene',
+    })
+
+    this.debugFolder.addBinding(this, 'wireframe').on('change', () =>
+      this.scene.traverse((c) => {
+        if (c.isMesh) {
+          c.material.wireframe = this.wireframe
+        }
+      })
+    )
+  }
+
+  /**
    * Set events
    */
   setEvents() {
@@ -457,7 +475,7 @@ export default class BasicScene {
     this.css3d?.dispose()
 
     // Debug
-    this.debugFolder && this.debug?.remove(this.debugFolder)
+    this.debugFolder && this.debug.panel.remove(this.debugFolder)
 
     // Events
     this.$bus.off('mousedown', this.handleMouseDownEvt)

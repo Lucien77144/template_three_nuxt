@@ -29,7 +29,7 @@ const { $bus }: any = useNuxtApp()
 const landingRef = ref<HTMLElement | null>(null)
 
 // Store
-const landing = computed(() => useDebugStore().getLanding)
+const landing = computed(() => useExperienceStore().getLanding)
 
 /**
  * Start the experience

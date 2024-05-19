@@ -38,7 +38,7 @@ export default class Loader {
   init() {
     // Images
     this.loaders.push({
-      extensions: ['jpg', 'png'],
+      extensions: ['jpg', 'png', 'svg'],
       action: (resource) => {
         const image = new Image()
 
@@ -137,7 +137,7 @@ export default class Loader {
       extensions: ['mp3', 'ogg', 'wav'],
       action: (resource) => {
         // Audio
-        const audio = document.createElement('audio')
+        const audio = document.createElement('audio', { autoplay: false })
         audio.preload = 'auto'
         audio.src = resource.source
 
