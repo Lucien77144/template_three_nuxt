@@ -128,15 +128,7 @@ export default class Renderer {
           uScene0: new Uniform(this.rt0.texture),
           uScene1: new Uniform(this.rt1.texture),
           uTransition: new Uniform(0),
-
-          // Focus
-          uFocColor: new Uniform(new Color('#f1dad2')),
-          uFocProgress: new Uniform(0),
-
-          // Data modal
-          uModalColor: new Uniform(new Color('#0d1a48')),
-          uModalProgress: new Uniform(0),
-          uBlob: new Uniform(),
+          uDirection: new Uniform(1),
 
           // Time
           uTime: new Uniform(0),

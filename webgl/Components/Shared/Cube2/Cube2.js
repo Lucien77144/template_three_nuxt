@@ -1,7 +1,7 @@
 import { BoxGeometry, Mesh, MeshNormalMaterial } from 'three'
 import BasicItem from '~/webgl/Modules/Basics/BasicItem'
 
-export default class Cube extends BasicItem {
+export default class Cube2 extends BasicItem {
   /**
    * Constructor
    */
@@ -29,7 +29,9 @@ export default class Cube extends BasicItem {
    * Set material
    */
   setMaterial() {
-    this.material = new MeshNormalMaterial()
+    this.material = new MeshNormalMaterial({
+      wireframe: true,
+    })
   }
 
   /**

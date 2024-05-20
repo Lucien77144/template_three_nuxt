@@ -1,4 +1,5 @@
 import Main from '~/webgl/Scenes/Main'
+import Main2 from '~/webgl/Scenes/Main2'
 
 export type TSceneInfos = {
   id?: number
@@ -23,6 +24,13 @@ const SCENES: TSceneInfos[] = [
     Scene: Main,
     transition: {
       duration: 2000,
+    },
+  },
+  {
+    name: 'main 2',
+    Scene: Main2,
+    transition: {
+      duration: 500,
     },
   },
 ]

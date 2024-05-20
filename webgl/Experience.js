@@ -14,13 +14,14 @@ export default class Experience {
   /**
    * Constructor
    */
-  constructor({ canvas, baseScene, debug } = {}) {
+  constructor({ canvas, baseScene, debug, name } = {}) {
     if (Experience._instance) {
       return Experience._instance
     }
     Experience._instance = this
 
     // Set container
+    this.name = name || 'Experience'
     this.canvas = canvas
     this.debugContainer = debug
     this.baseScene = baseScene

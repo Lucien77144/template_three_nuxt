@@ -64,8 +64,10 @@ export default class SceneManager {
     this.debugFolder.disabled = false
 
     // Add switch event on change scene
-    this.debugScene.on('change', ({ value }) =>
-      this.switch(this.getSceneFromList(value))
+    setTimeout(() =>
+      this.debugScene.on('change', ({ value }) =>
+        this.switch(this.getSceneFromList(value))
+      )
     )
   }
 
@@ -174,7 +176,6 @@ export default class SceneManager {
           navigation: {
             start: next.nav?.start,
             scale: next.nav?.scale,
-            scene: next,
           },
           scroll: 0,
         })
@@ -234,6 +235,7 @@ export default class SceneManager {
     // Init active scene
     this.baseScrollFactor = this.scrollManager.factor
     this.active = new scene.Scene()
+
     // Switch complete function on the new scene
     this.active?.onInitComplete?.()
 
