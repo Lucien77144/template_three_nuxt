@@ -14,7 +14,7 @@ export default class Cube extends BasicItem {
     // New elements
     this.geometry = null
     this.material = null
-    this.mesh = nullgetScroll
+    this.mesh = null
     this.holdDuration = 2000
   }
 

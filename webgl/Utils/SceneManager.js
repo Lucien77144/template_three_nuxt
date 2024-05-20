@@ -75,7 +75,9 @@ export default class SceneManager {
    */
   setScene(scene) {
     this.scene = scene
-    this.debugScene.value = scene.name
+    if (this.debug) {
+      this.debugScene.value = scene.name
+    }
   }
 
   /**
@@ -124,13 +126,7 @@ export default class SceneManager {
     // Init next scene
     const previous = this.sceneName
     this.sceneName = next.name
-    this.next = new next.Scene({
-      interest: {
-        list: next.nav?.interest,
-        base: this.baseScrollFactor,
-        current: this.scrollManager.factor,
-      },
-    })
+    this.next = new next.Scene()
 
     // Switch function start on previous scene
     this.active?.onDisposeStart?.()
@@ -175,7 +171,11 @@ export default class SceneManager {
       onComplete: () => {
         // Reset navigation values
         this.navigate({
-          navigation: { start: next.nav?.start, scale: next.nav?.scale },
+          navigation: {
+            start: next.nav?.start,
+            scale: next.nav?.scale,
+            scene: next,
+          },
           scroll: 0,
         })
 
@@ -233,13 +233,7 @@ export default class SceneManager {
 
     // Init active scene
     this.baseScrollFactor = this.scrollManager.factor
-    this.active = new scene.Scene({
-      interest: {
-        list: scene.nav?.interest,
-        base: this.baseScrollFactor,
-        current: this.scrollManager.factor,
-      },
-    })
+    this.active = new scene.Scene()
     // Switch complete function on the new scene
     this.active?.onInitComplete?.()
 
