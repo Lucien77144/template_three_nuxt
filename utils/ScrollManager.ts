@@ -2,6 +2,10 @@ import { MathUtils } from 'three'
 import { isDeviceMobile } from '~/utils/functions/device'
 import DragManager, { type TDragEvent } from './DragManager'
 
+type TOptions = {
+  limit?: { min: number; max: number }
+}
+
 export type TScrollEvent = {
   delta: number
   current: number
@@ -16,6 +20,7 @@ export default class ScrollManager extends EventEmitter {
   public delta: number
   public target: number
   public current: number
+  public limit?: TOptions['limit']
 
   // Private
   private _dragManager: DragManager
@@ -25,8 +30,11 @@ export default class ScrollManager extends EventEmitter {
   // Plugin
   private $bus: any
 
-  constructor() {
+  constructor({ limit }: TOptions = {}) {
     super()
+
+    // Get options
+    this.limit = limit
 
     // Plugin
     this.$bus = useNuxtApp().$bus
@@ -159,7 +167,10 @@ export default class ScrollManager extends EventEmitter {
    */
   private _updateTarget() {
     this.target += this.delta * (this.factor / 100)
-    this.target = MathUtils.clamp(this.target, 0, 100)
+
+    if (this.limit) {
+      this.target = MathUtils.clamp(this.target, this.limit.min, this.limit.max)
+    }
   }
 
   /**

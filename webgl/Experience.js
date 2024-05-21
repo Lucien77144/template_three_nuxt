@@ -194,7 +194,7 @@ export default class Experience {
     this.initDebug()
 
     // Set elements
-    this.scrollManager = new ScrollManager()
+    this.scrollManager = new ScrollManager({ limit: { min: 0, max: 100 } })
     this.sceneManager = new SceneManager()
     this.raycaster = new Raycaster()
     this.renderer = new Renderer()
