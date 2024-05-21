@@ -137,7 +137,7 @@ export default class Loader {
       extensions: ['mp3', 'ogg', 'wav'],
       action: (resource) => {
         // Audio
-        const audio = document.createElement('audio', { autoplay: false })
+        const audio = document.createElement('audio')
         audio.preload = 'auto'
         audio.src = resource.source
 
@@ -278,7 +278,7 @@ export default class Loader {
     this.$bus.emit('fileEnd', { resource, data })
 
     if (this.loaded === this.toLoad) {
-      this.$bus.emit('loadingEnd')
+      this.$bus.emit('loadingGroupEnd')
     }
   }
 }
