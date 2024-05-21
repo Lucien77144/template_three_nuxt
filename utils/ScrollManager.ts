@@ -4,6 +4,10 @@ import DragManager, { type TDragEvent } from './DragManager'
 
 type TOptions = {
   limit?: { min: number; max: number }
+  speed?: number
+  factor?: number
+  current?: number
+  disabled?: boolean
 }
 
 export type TScrollEvent = {
@@ -30,22 +34,22 @@ export default class ScrollManager extends EventEmitter {
   // Plugin
   private $bus: any
 
-  constructor({ limit }: TOptions = {}) {
+  constructor({ limit, speed, factor, current, disabled }: TOptions = {}) {
     super()
 
     // Get options
     this.limit = limit
+    this.speed = speed ?? 0.05
+    this.factor = factor ?? 0.3
+    this.current = current ?? 0
+    this.target = current ?? 0
+    this.disabled = disabled ?? false
 
     // Plugin
     this.$bus = useNuxtApp().$bus
 
     // Get elements from experience
-    this.disabled = false
-    this.speed = 0.05
     this.delta = 0
-    this.target = 0
-    this.factor = 0.3
-    this.current = 0
     this._dragManager = new DragManager()
 
     // Init
