@@ -212,6 +212,6 @@ export default class BasicItem {
    */
   dispose() {
     // Debug
-    this.debugFolder && this.debug?.remove(this.debugFolder)
+    this.debugFolder && this.debug?.remove?.(this.debugFolder)
   }
 }

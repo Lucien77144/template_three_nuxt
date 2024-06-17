@@ -170,7 +170,7 @@ export default class BasicScene {
     ])
 
     // If mouse leave the hovered item, refresh the hovered item
-    if (this.hovered?.id !== hovered?.id) {
+    if (this.hovered?.item?.id !== hovered?.item?.id) {
       this.triggerFn(this.hovered, 'onMouseLeave')
       this.hovered = hovered
       this.triggerFn(this.hovered, 'onMouseEnter')
@@ -322,8 +322,9 @@ export default class BasicScene {
     const flatComponents = (c) => {
       Object.keys(c).forEach((key) => {
         const value = c[key]
-        value.parentScene = this
+        if (!value) return console.warn(`Component ${key} is not defined`, c)
 
+        value.parentScene = this
         res[key] = value
         value.init?.()
 
