@@ -21,7 +21,7 @@ import type {
   ICSS3DRendererStore,
 } from '~/models/stores/cssRenderer.store.model'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
-import PerspectiveCamera from '../Camera/PerspectiveCamera'
+import BasicPerspectiveCamera from '../Camera/BasicPerspectiveCamera'
 
 /**
  * @class BasicScene
@@ -169,7 +169,7 @@ export default abstract class AbstractScene {
 
     // Public
     this.scene = new Scene()
-    this.camera = new PerspectiveCamera()
+    this.camera = new BasicPerspectiveCamera()
     this.allComponents = {}
     this.name = this.constructor.name
     this.wireframe = false

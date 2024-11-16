@@ -1,6 +1,6 @@
 import AbstractCamera from '../Abstract/AbstractCamera'
 
-export default class PerspectiveCamera extends AbstractCamera {
+export default class BasicPerspectiveCamera extends AbstractCamera {
   constructor() {
     super()
   }
