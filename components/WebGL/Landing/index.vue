@@ -36,7 +36,7 @@ const landing = computed(() => useExperienceStore().getLanding)
  * @param muted - If the audio should be muted
  */
 const start = (muted: boolean) => {
-  $bus.emit('start')
+  $bus.emit('experience:start')
   $bus.emit(muted ? 'audio:mute' : 'audio:unmute')
 
   if (landingRef.value) {

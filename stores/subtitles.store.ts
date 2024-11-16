@@ -1,11 +1,7 @@
-type TSubtitle = {
-  cues: VTTCue[]
-  disabled: boolean
-}
+import type { TSubtitle } from '~/models/stores/subtitles.store.model'
 
 export const useSubtitlesStore = defineStore('subtitles', {
   state: (): TSubtitle => ({
-    cues: [],
     disabled: false,
   }),
   getters: {
@@ -18,7 +14,7 @@ export const useSubtitlesStore = defineStore('subtitles', {
   },
   actions: {
     setCues(val: TSubtitle['cues']) {
-      this.cues = { ...val }
+      this.cues = val
     },
     setDisabled(val: TSubtitle['disabled']) {
       this.disabled = val

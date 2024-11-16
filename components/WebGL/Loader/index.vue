@@ -17,7 +17,7 @@ const lottieAnimation = ref<InstanceType<typeof Vue3Lottie>>()
 
 // Plugins
 const { $bus }: any = useNuxtApp()
-$bus.on('loading', (value: number) => {
+$bus.on('resources:loading', (value: number) => {
   loadValue.value = value
 
   // If the loading value increases, increase the animation time

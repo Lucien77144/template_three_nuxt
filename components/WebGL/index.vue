@@ -31,8 +31,8 @@ import Experience from '~/webgl/Experience'
 // Shallow Refs
 const exp = shallowRef<Experience | null>(null)
 // Refs
-const canvasRef = ref<HTMLElement | null>(null)
-const debugRef = ref<HTMLElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement>()
+const debugRef = ref<HTMLElement>()
 
 // Route
 const route = useRoute()
@@ -52,7 +52,7 @@ onMounted(() => {
   exp.value = new Experience({
     canvas: canvasRef.value,
     debug: debugRef.value,
-    baseScene: route.query.scene,
+    defaultScene: route.query.scene as string,
     name: 'template',
   })
 

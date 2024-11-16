@@ -125,7 +125,7 @@ export default class EventEmitter {
    * @param _name Event name
    * @param _args Event arguments
    */
-  public trigger(_name: string, _args?: any): any {
+  protected trigger(_name: string, _args?: any): any {
     // Errors
     if (typeof _name === 'undefined' || _name === '') {
       console.warn('wrong name')

@@ -1,18 +1,9 @@
-import type { TSceneInfos } from '~/const/scenes.const'
+import type { TExperienceStore } from '~/models/stores/experience.store.model'
 
-type TExpStore = {
-  active: boolean
-  landing: boolean
-  scroll: number
-  navigation: {
-    scene?: TSceneInfos
-    start: number // Position of the current scene in %
-    scale: number // Scale of the current scene
-  }
-}
+type TParam<T extends keyof TExperienceStore> = TExperienceStore[T]
 
 export const useExperienceStore = defineStore('experience', {
-  state: (): TExpStore => ({
+  state: (): TExperienceStore => ({
     active: false,
     landing: true,
     scroll: 0, // 0-100,
@@ -23,30 +14,30 @@ export const useExperienceStore = defineStore('experience', {
     },
   }),
   getters: {
-    getActive(): TExpStore['active'] {
+    getActive(): TParam<'active'> {
       return this.active
     },
-    getLanding(): TExpStore['landing'] {
+    getLanding(): TParam<'landing'> {
       return this.landing
     },
-    getScroll(): TExpStore['scroll'] {
+    getScroll(): TParam<'scroll'> {
       return this.scroll
     },
-    getNavigation(): TExpStore['navigation'] {
+    getNavigation(): TParam<'navigation'> {
       return this.navigation
     },
   },
   actions: {
-    setActive(val: TExpStore['active']) {
+    setActive(val: TParam<'active'>) {
       this.active = val
     },
-    setLanding(val: TExpStore['landing']) {
+    setLanding(val: TParam<'landing'>) {
       this.landing = val
     },
-    setScroll(val: TExpStore['scroll']) {
+    setScroll(val: TParam<'scroll'>) {
       this.scroll = val
     },
-    setNavigation(val: TExpStore['navigation']) {
+    setNavigation(val: TParam<'navigation'>) {
       this.navigation = { ...this.navigation, ...val }
     },
   },

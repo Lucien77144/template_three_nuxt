@@ -24,14 +24,14 @@
 </template>
 
 <script lang="ts" setup>
-import type { TCursor } from '~/utils/CursorManager'
+import { Vector2 } from 'three'
 
 // Bus
 const { $bus }: any = useNuxtApp()
 
 // Refs
 const offset = ref<number>(0)
-const cursor = ref<TCursor>({ x: 0, y: 0 })
+const cursor = ref<Vector2>(new Vector2(0))
 
 // Progression
 const progress = computed(() => useHoldStore().getProgress)
@@ -49,7 +49,7 @@ watch(progress, () => {
 })
 
 // $bus
-$bus.on('mousemove', ({ position }: { position: TCursor }) => {
+$bus.on('mousemove', ({ position }: { position: Vector2 }) => {
   cursor.value = position
 })
 </script>

@@ -59,7 +59,7 @@ export default class KeysManager extends EventEmitter {
   /**
    * Destroy the cursor and remove all events
    */
-  public destroy(): void {
+  public dispose(): void {
     this.el.removeEventListener('keydown', this._handleKeyDown)
     this.el.removeEventListener('keyup', this._handleKeyUp)
   }

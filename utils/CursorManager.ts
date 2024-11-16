@@ -1,11 +1,8 @@
+import type Experience from '~/webgl/Experience'
 import Viewport from './Viewport'
+import { Vector2, type Vector } from 'three'
 
-export type TCursor = {
-  x: number
-  y: number
-}
-
-type TCursorEvents =
+type Vector2Events =
   | 'mousedown'
   | 'mousemove'
   | 'mouseup'
@@ -15,40 +12,59 @@ type TCursorEvents =
   | 'touchmove'
   | 'touchend'
 
-export default class CursorManager {
+export type TCursorEvent = {
+  centered: Vector2
+  normalized: Vector2
+  position: Vector2
+  delta?: Vector2
+}
+
+export default class CursorManager extends EventEmitter {
   // Public
   public el: HTMLElement | Window
   public enabled: boolean
   public viewport: Viewport
-  public position: TCursor
-  public normalized: TCursor
-  public centered: TCursor
+  public position: Vector2
+  public normalized: Vector2
+  public centered: Vector2
+  public enableBus: boolean
 
   // Private
-  private _handleMouseDown: any
-  private _handleMouseMove: any
-  private _handleMouseUp: any
-  private _handleMouseEnter: any
-  private _handleMouseLeave: any
-  private _handleTouchStart: any
-  private _handleTouchMove: any
-  private _handleTouchUp: any
+  private _handleMouseDown!: (e: Event) => void
+  private _handleMouseMove!: (e: Event) => void
+  private _handleMouseUp!: (e: Event) => void
+  private _handleMouseEnter!: (e: Event) => void
+  private _handleMouseLeave!: (e: Event) => void
+  private _handleTouchStart!: (e: Event) => void
+  private _handleTouchMove!: (e: Event) => void
+  private _handleTouchUp!: (e: Event) => void
 
   // Nuxt
-  private $bus: any
+  private $bus: Experience['$bus']
 
   /**
    * Constructor
+   * @param _options Options
+   * @param _options.el Element to attach the cursor to (default: window)
+   * @param _options.enabled Enable the cursor (default: true)
+   * @param _options.enableBus Enable the bus (default: false)
    */
-  constructor(_options?: { el?: HTMLElement | Window }) {
+  constructor(_options?: {
+    el?: HTMLElement | Window
+    enabled?: boolean
+    enableBus?: boolean
+  }) {
+    super()
+
     // Public
     this.el = _options?.el || window
-    this.enabled = true
+    this.enabled = _options?.enabled ?? true
+    this.enableBus = !!_options?.enableBus
     this.viewport = new Viewport()
 
-    this.position = { x: 0, y: 0 }
-    this.normalized = { x: 0, y: 0 }
-    this.centered = { x: 0, y: 0 }
+    this.position = new Vector2()
+    this.normalized = new Vector2()
+    this.centered = new Vector2()
 
     // Nuxt
     this.$bus = useNuxtApp().$bus
@@ -63,49 +79,54 @@ export default class CursorManager {
    * @param e Touch event
    * @returns ClientX and ClientY
    */
-  private _getMobileEvent(e: TouchEvent): TCursor {
-    return {
-      x:
-        (e.touches && e.touches.length && e.touches[0].clientX) ||
-        (e.changedTouches &&
-          e.changedTouches.length &&
-          e.changedTouches[0].clientX),
-      y:
-        (e.touches && e.touches.length && e.touches[0].clientY) ||
-        (e.changedTouches &&
-          e.changedTouches.length &&
-          e.changedTouches[0].clientY),
-    }
+  private _getMobileEvent(e: TouchEvent): Vector2 {
+    const x =
+      (e.touches && e.touches.length && e.touches[0].clientX) ||
+      (e.changedTouches &&
+        e.changedTouches.length &&
+        e.changedTouches[0].clientX)
+
+    const y =
+      (e.touches && e.touches.length && e.touches[0].clientY) ||
+      (e.changedTouches &&
+        e.changedTouches.length &&
+        e.changedTouches[0].clientY)
+
+    return new Vector2(x, y)
+  }
+
+  /**
+   * Get the client values
+   * @param e Event
+   * @returns ClientX and ClientY
+   */
+  private _getVec2Values(e: MouseEvent): Vector2 {
+    return new Vector2(e.clientX, e.clientY)
   }
 
   /**
    * Setup binds for the cursor
    */
   private _initBinds(): void {
-    const getVec2Values = (e: MouseEvent): TCursor => ({
-      x: e.clientX,
-      y: e.clientY,
-    })
-
-    // Desktop
-    this._handleMouseDown = (e: MouseEvent) =>
-      this._onStart.bind(this)(getVec2Values(e))
-    this._handleMouseMove = (e: MouseEvent) =>
-      this._onMove.bind(this)(getVec2Values(e))
-    this._handleMouseUp = (e: MouseEvent) =>
-      this._onEnd.bind(this)(getVec2Values(e))
-    this._handleMouseEnter = (e: MouseEvent) =>
-      this._onMouseEnter.bind(this)(getVec2Values(e))
-    this._handleMouseLeave = (e: MouseEvent) =>
-      this._onMouseLeave.bind(this)(getVec2Values(e))
+    // Bureau
+    this._handleMouseDown = (e) =>
+      this._onStart.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseMove = (e) =>
+      this._onMove.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseUp = (e) =>
+      this._onEnd.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseEnter = (e) =>
+      this._onMouseEnter.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseLeave = (e) =>
+      this._onMouseLeave.bind(this)(this._getVec2Values(e as MouseEvent))
 
     // Mobile
-    this._handleTouchStart = (e: TouchEvent) =>
-      this._onStart.bind(this)(this._getMobileEvent(e))
-    this._handleTouchMove = (e: TouchEvent) =>
-      this._onMove.bind(this)(this._getMobileEvent(e))
-    this._handleTouchUp = (e: TouchEvent) =>
-      this._onEnd.bind(this)(this._getMobileEvent(e))
+    this._handleTouchStart = (e) =>
+      this._onStart.bind(this)(this._getMobileEvent(e as TouchEvent))
+    this._handleTouchMove = (e) =>
+      this._onMove.bind(this)(this._getMobileEvent(e as TouchEvent))
+    this._handleTouchUp = (e) =>
+      this._onEnd.bind(this)(this._getMobileEvent(e as TouchEvent))
   }
 
   /**
@@ -135,7 +156,7 @@ export default class CursorManager {
    * On start
    * @param position Mouse position (x, y)
    */
-  private _onStart(position: TCursor): void {
+  private _onStart(position: Vector2): void {
     this.position = position
 
     this._handleEvent('mousedown', { position })
@@ -146,11 +167,11 @@ export default class CursorManager {
    * On move
    * @param position Mouse position (x, y)
    */
-  private _onMove(position: TCursor): void {
-    const delta = {
-      x: this.position.x - position.x,
-      y: this.position.y - position.y,
-    }
+  private _onMove(position: Vector2): void {
+    const delta = new Vector2(
+      this.position.x - position.x,
+      this.position.y - position.y
+    )
     this.position = position
 
     this._handleEvent('mousemove', { position, delta })
@@ -161,7 +182,7 @@ export default class CursorManager {
    * On up
    * @param position Mouse position (x, y)
    */
-  private _onEnd(position: TCursor): void {
+  private _onEnd(position: Vector2): void {
     this._handleEvent('mouseup', { position })
     this._handleEvent('touchend', { position })
   }
@@ -170,7 +191,7 @@ export default class CursorManager {
    * On position enter
    * @param e Mouse event
    */
-  private _onMouseEnter(position: TCursor): void {
+  private _onMouseEnter(position: Vector2): void {
     this._handleEvent('mouseenter', { position })
   }
 
@@ -178,7 +199,7 @@ export default class CursorManager {
    * On position leave
    * @param e  Mouse event
    */
-  private _onMouseLeave(position: TCursor): void {
+  private _onMouseLeave(position: Vector2): void {
     this._handleEvent('mouseleave', { position })
   }
 
@@ -189,10 +210,10 @@ export default class CursorManager {
    * @param event Event type
    */
   private _handleEvent(
-    event: TCursorEvents,
+    event: Vector2Events,
     params: {
-      position: TCursor
-      delta?: TCursor
+      position: Vector2
+      delta?: Vector2
     }
   ): void {
     if (!this.enabled) return
@@ -209,7 +230,17 @@ export default class CursorManager {
     this.centered.y = -(this.position.y / this.viewport.height) * 2 + 1
 
     // Emit event and pass the position, normalized and centered values
-    this.$bus.emit(event, {
+    // Emit the event to the bus if it's enabled
+    if (this.enableBus) {
+      this.$bus.emit(event, {
+        normalized: this.normalized,
+        centered: this.centered,
+        ...params,
+      })
+    }
+
+    // Emit the event to the cursor manager
+    this.trigger(event, {
       normalized: this.normalized,
       centered: this.centered,
       ...params,
@@ -219,7 +250,7 @@ export default class CursorManager {
   /**
    * Destroy the cursor and remove all events
    */
-  public destroy(): void {
+  public dispose(): void {
     // Desktop
     this.el.removeEventListener('mousedown', this._handleMouseDown)
     this.el.removeEventListener('mousemove', this._handleMouseMove)

@@ -4,8 +4,8 @@
       class="renderer__item"
       v-for="(d, i) in list"
       :key="i"
-      :id="d?.id?.toLowerCase()"
-      :ref="(el) => add({ ...d, el })"
+      :id="d?.id.toLowerCase()"
+      :ref="(el) => add({ ...d, el: el as HTMLElement })"
     >
       <component
         v-if="d?.template"
@@ -17,6 +17,8 @@
 </template>
 
 <script lang="ts" setup>
+import type { ICSS3DRendererStore } from '~/models/stores/cssRenderer.store.model'
+
 // Bus
 const { $bus }: any = useNuxtApp()
 
@@ -25,6 +27,9 @@ const list = computed(() => useCSSRendererStore().get3DList)
 
 // Add dialog to css renderer
 const add = (d: ICSS3DRendererStore) => $bus.emit('CSS3D:add', d)
+
+// On unmounted
+onUnmounted(() => useCSSRendererStore().setCSS3DList([]))
 </script>
 
 <style src="./style.scss" lang="scss" scoped></style>

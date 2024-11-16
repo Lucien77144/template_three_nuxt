@@ -1,7 +1,4 @@
-type THold = {
-  progress: number
-  complete: boolean
-}
+import type { THold } from '~/models/stores/hold.store.model'
 
 export const useHoldStore = defineStore('hold', {
   state: (): THold => ({

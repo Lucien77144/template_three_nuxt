@@ -1,12 +1,14 @@
 import { MathUtils } from 'three'
 import { isDeviceMobile } from '~/utils/functions/device'
 import DragManager, { type TDragEvent } from './DragManager'
+import Time from '~/webgl/Utils/Time'
 
 type TOptions = {
   limit?: { min: number; max: number }
   speed?: number
   factor?: number
   current?: number
+  decimal?: number
   disabled?: boolean
 }
 
@@ -24,32 +26,37 @@ export default class ScrollManager extends EventEmitter {
   public delta: number
   public target: number
   public current: number
+  public decimal: number
   public limit?: TOptions['limit']
 
   // Private
+  private _time: Time
   private _dragManager: DragManager
   private _handleScroll: any
   private _handleUpdate: any
 
-  // Plugin
-  private $bus: any
-
-  constructor({ limit, speed, factor, current, disabled }: TOptions = {}) {
+  constructor({
+    limit,
+    speed,
+    factor,
+    current,
+    decimal,
+    disabled,
+  }: TOptions = {}) {
     super()
 
-    // Get options
+    // Public
     this.limit = limit
     this.speed = speed ?? 0.05
     this.factor = factor ?? 0.3
     this.current = current ?? 0
     this.target = current ?? 0
-    this.disabled = disabled ?? false
-
-    // Plugin
-    this.$bus = useNuxtApp().$bus
-
-    // Get elements from experience
+    this.decimal = decimal ?? 10
+    this.disabled = !!disabled
     this.delta = 0
+
+    // Private
+    this._time = new Time()
     this._dragManager = new DragManager()
 
     // Init
@@ -163,7 +170,7 @@ export default class ScrollManager extends EventEmitter {
    */
   private _setUpdate() {
     this._handleUpdate = this._update.bind(this)
-    this.$bus.on('tick', this._handleUpdate)
+    this._time.on('tick', this._handleUpdate)
   }
 
   /**
@@ -193,7 +200,7 @@ export default class ScrollManager extends EventEmitter {
 
     const prev = this.current
     const current = MathUtils.lerp(this.current, this.target, this.speed)
-    this.current = Math.floor(current * 1000) / 1000
+    this.current = Math.floor(current * this.decimal) / this.decimal
 
     if (this.current !== prev) this._emit()
   }
@@ -201,8 +208,8 @@ export default class ScrollManager extends EventEmitter {
   /**
    * Destroy the scroll manager
    */
-  public destroy() {
-    this._dragManager.destroy()
+  public dispose() {
+    this._dragManager.dispose()
     window.removeEventListener('DOMMouseScroll', this._handleScroll)
     window.removeEventListener('wheel', this._handleScroll)
   }

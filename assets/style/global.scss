@@ -1,5 +1,5 @@
-@import './_variables.scss';
-@import './_fonts.scss';
+@use '_variables.scss';
+@use '_fonts.scss';
 
 /**
  * Reset
@@ -19,8 +19,8 @@ html {
   width: 100vw;
   padding: 0;
   margin: 0;
-  background-color: $beige-sky;
-  font-family: $lato;
+  background-color: variables.$beige-sky;
+  font-family: variables.$lato;
   overflow: hidden;
   overscroll-behavior: none;
 }

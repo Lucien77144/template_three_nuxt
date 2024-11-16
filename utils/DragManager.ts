@@ -1,13 +1,13 @@
-import type { TCursor } from './CursorManager'
+import { Vector2 } from 'three'
 import Viewport from './Viewport'
 
 type TDragEvents = 'dragstart' | 'drag' | 'dragend' | 'tap'
 
 export type TDragEvent = {
-  position: TCursor
-  delta: TCursor
-  normalized: TCursor
-  centered: TCursor
+  position: Vector2
+  delta: Vector2
+  normalized: Vector2
+  centered: Vector2
 }
 
 const TAP_TRESHOLD: number = 2
@@ -18,19 +18,19 @@ export default class DragManager extends EventEmitter {
   public enabled: boolean
   public drag: boolean
   public viewport: Viewport
-  public position: TCursor
-  public normalized: TCursor
-  public centered: TCursor
-  public start: TCursor
-  public delta: TCursor
+  public position: Vector2
+  public normalized: Vector2
+  public centered: Vector2
+  public start: Vector2
+  public delta: Vector2
 
   // Private
-  private _handleMouseDown: any
-  private _handleMouseMove: any
-  private _handleMouseUp: any
-  private _handleTouchStart: any
-  private _handleTouchMove: any
-  private _handleTouchUp: any
+  private _handleMouseDown!: (e: Event) => void
+  private _handleMouseMove!: (e: Event) => void
+  private _handleMouseUp!: (e: Event) => void
+  private _handleTouchStart!: (e: Event) => void
+  private _handleTouchMove!: (e: Event) => void
+  private _handleTouchUp!: (e: Event) => void
 
   /**
    * Constructor
@@ -43,11 +43,11 @@ export default class DragManager extends EventEmitter {
     this.enabled = true
     this.drag = false
     this.viewport = new Viewport()
-    this.position = { x: 0, y: 0 }
-    this.normalized = { x: 0, y: 0 }
-    this.centered = { x: 0, y: 0 }
-    this.start = { x: 0, y: 0 }
-    this.delta = { x: 0, y: 0 }
+    this.position = new Vector2(0)
+    this.normalized = new Vector2(0)
+    this.centered = new Vector2(0)
+    this.start = new Vector2(0)
+    this.delta = new Vector2(0)
 
     this._initBinds()
     this._initEvents()
@@ -58,45 +58,50 @@ export default class DragManager extends EventEmitter {
    * @param e Touch event
    * @returns ClientX and ClientY
    */
-  private _getMobileEvent(e: TouchEvent): TCursor {
-    return {
-      x:
-        (e.touches && e.touches.length && e.touches[0].clientX) ||
-        (e.changedTouches &&
-          e.changedTouches.length &&
-          e.changedTouches[0].clientX),
-      y:
-        (e.touches && e.touches.length && e.touches[0].clientY) ||
-        (e.changedTouches &&
-          e.changedTouches.length &&
-          e.changedTouches[0].clientY),
-    }
+  private _getMobileEvent(e: TouchEvent): Vector2 {
+    const x =
+      (e.touches && e.touches.length && e.touches[0].clientX) ||
+      (e.changedTouches &&
+        e.changedTouches.length &&
+        e.changedTouches[0].clientX)
+
+    const y =
+      (e.touches && e.touches.length && e.touches[0].clientY) ||
+      (e.changedTouches &&
+        e.changedTouches.length &&
+        e.changedTouches[0].clientY)
+
+    return new Vector2(x, y)
+  }
+
+  /**
+   * Get the client values
+   * @param e Event
+   * @returns ClientX and ClientY
+   */
+  private _getVec2Values(e: MouseEvent): Vector2 {
+    return new Vector2(e.clientX, e.clientY)
   }
 
   /**
    * Setup binds for the cursor
    */
   private _initBinds(): void {
-    const getVec2Values = (e: MouseEvent): TCursor => ({
-      x: e.clientX,
-      y: e.clientY,
-    })
-
     // Desktop
-    this._handleMouseDown = (e: MouseEvent) =>
-      this._onStart.bind(this)(getVec2Values(e))
-    this._handleMouseMove = (e: MouseEvent) =>
-      this._onMove.bind(this)(getVec2Values(e))
-    this._handleMouseUp = (e: MouseEvent) =>
-      this._onEnd.bind(this)(getVec2Values(e))
+    this._handleMouseDown = (e) =>
+      this._onStart.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseMove = (e) =>
+      this._onMove.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseUp = (e) =>
+      this._onEnd.bind(this)(this._getVec2Values(e as MouseEvent))
 
     // Mobile
-    this._handleTouchStart = (e: TouchEvent) =>
-      this._onStart.bind(this)(this._getMobileEvent(e))
-    this._handleTouchMove = (e: TouchEvent) =>
-      this._onMove.bind(this)(this._getMobileEvent(e))
-    this._handleTouchUp = (e: TouchEvent) =>
-      this._onEnd.bind(this)(this._getMobileEvent(e))
+    this._handleTouchStart = (e) =>
+      this._onStart.bind(this)(this._getMobileEvent(e as TouchEvent))
+    this._handleTouchMove = (e) =>
+      this._onMove.bind(this)(this._getMobileEvent(e as TouchEvent))
+    this._handleTouchUp = (e) =>
+      this._onEnd.bind(this)(this._getMobileEvent(e as TouchEvent))
   }
 
   /**
@@ -124,16 +129,13 @@ export default class DragManager extends EventEmitter {
    * On start
    * @param position Mouse position (x, y)
    */
-  private _onStart(position: TCursor): void {
+  private _onStart(position: Vector2): void {
     this.drag = true
 
     this.start = position
     this._handleEvent('dragstart', {
       position,
-      delta: {
-        x: 0,
-        y: 0,
-      },
+      delta: new Vector2(0),
     })
   }
 
@@ -141,11 +143,11 @@ export default class DragManager extends EventEmitter {
    * On move
    * @param position Mouse position (x, y)
    */
-  private _onMove(position: TCursor): void {
-    const delta = {
-      x: this.position.x - position.x,
-      y: this.position.y - position.y,
-    }
+  private _onMove(position: Vector2): void {
+    const delta = new Vector2(
+      this.position.x - position.x,
+      this.position.y - position.y
+    )
     this.position = position
     this.delta = delta
 
@@ -156,7 +158,7 @@ export default class DragManager extends EventEmitter {
    * On up
    * @param position Mouse position (x, y)
    */
-  private _onEnd(position: TCursor): void {
+  private _onEnd(position: Vector2): void {
     const delta = this.delta
     const tap =
       Math.abs(position.x - this.start.x) < TAP_TRESHOLD &&
@@ -180,8 +182,8 @@ export default class DragManager extends EventEmitter {
   private _handleEvent(
     event: TDragEvents,
     params: {
-      position: TCursor
-      delta?: TCursor
+      position: Vector2
+      delta?: Vector2
     }
   ): void {
     if (!this.enabled) return
@@ -210,7 +212,7 @@ export default class DragManager extends EventEmitter {
   /**
    * Destroy the cursor and remove all events
    */
-  public destroy(): void {
+  public dispose(): void {
     // Desktop
     this.el.removeEventListener('mousedown', this._handleMouseDown)
     window.removeEventListener('mousemove', this._handleMouseMove)

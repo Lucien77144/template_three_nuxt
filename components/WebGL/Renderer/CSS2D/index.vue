@@ -5,7 +5,7 @@
       v-for="(d, i) in list"
       :key="i"
       :id="d?.id?.toLowerCase()"
-      :ref="(el) => add({ ...d, el })"
+      :ref="(el) => add({ ...d, el: el as HTMLElement })"
     >
       <component
         v-if="d?.template"
@@ -17,6 +17,8 @@
 </template>
 
 <script lang="ts" setup>
+import type { ICSS2DRendererStore } from '~/models/stores/cssRenderer.store.model'
+
 // Bus
 const { $bus }: any = useNuxtApp()
 

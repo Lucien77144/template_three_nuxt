@@ -6,11 +6,12 @@ import { breakpoint, breakpoints } from '~/utils/functions/breakpoints'
 import dpr from '~/utils/functions/dpr'
 import isTouch from '~/utils/functions/isTouch'
 
-export default class Viewport {
+export default class Viewport extends EventEmitter {
   // Singleton
   static _instance: Viewport
 
   // Public
+  public enableBus!: boolean
   public debug!: boolean
   public isTouch!: boolean
   public isMobile!: boolean
@@ -29,16 +30,24 @@ export default class Viewport {
 
   // Nuxt
   private $bus: any
-  private $route: any
+  private $router: any
 
   /**
    * Constructor
+   * @param _options Options
+   * @param _options.enableBus Enable the bus (default: false)
    */
-  constructor() {
+  constructor(_options?: { enableBus?: boolean }) {
+    super()
+
+    if (!window) return
     if (Viewport._instance) {
       return Viewport._instance
     }
     Viewport._instance = this
+
+    // Public
+    this.enableBus = !!_options?.enableBus
 
     // Private
     this._handleResize = this.resize.bind(this)
@@ -46,7 +55,7 @@ export default class Viewport {
 
     // Nuxt
     this.$bus = useNuxtApp().$bus
-    this.$route = useRoute()
+    this.$router = useNuxtApp().$router
 
     // Init
     this.setData()
@@ -56,7 +65,7 @@ export default class Viewport {
    * Set data of the viewport
    */
   public setData(): void {
-    this.debug = this.$route.hash?.includes('debug')
+    this.debug = this.$router.currentRoute.value.href.includes('debug')
     this.width = document.documentElement.clientWidth
     this.height = document.documentElement.clientHeight
     this.ratio = this.width / this.height
@@ -76,13 +85,14 @@ export default class Viewport {
   public resize(): void {
     this.setData()
 
-    this.$bus.emit('resize')
+    if (this.enableBus) this.$bus.emit('resize')
+    this.trigger('resize')
   }
 
   /**
    * Destroy viewport
    */
-  public destroy(): void {
+  public dispose(): void {
     this.$bus.off('resize', this.resize)
     window.removeEventListener('resize', this._handleResize, false)
   }

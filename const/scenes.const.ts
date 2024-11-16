@@ -1,33 +1,17 @@
+import type { TSceneInfos } from '~/models/utils/SceneManager.model'
 import Main from '~/webgl/Scenes/Main'
 import Main2 from '~/webgl/Scenes/Main2'
-
-export type TSceneInfos = {
-  id?: number
-  isDefault?: boolean
-  name: string
-  Scene: any
-  nav?: {
-    scale: number
-    start?: number
-    end?: number
-  }
-  transition?: {
-    duration: number
-  }
-}
 
 // Scene list
 const SCENES: TSceneInfos[] = [
   {
     isDefault: true,
-    name: 'main',
     Scene: Main,
     transition: {
       duration: 2000,
     },
   },
   {
-    name: 'main 2',
     Scene: Main2,
     transition: {
       duration: 500,
@@ -42,6 +26,7 @@ const total = (arr: any[]): number => {
 // Set ids :
 SCENES.forEach((s: TSceneInfos, i: number) => {
   s.id ??= i
+  s.name ??= s.Scene.name
 })
 
 // Init the nav start and end

@@ -1,15 +1,18 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ['@/assets/style/global.scss'],
+
   vite: {
     css: {
       preprocessorOptions: {
         scss: {
+          api: 'modern-compiler',
           additionalData: '@use "~/assets/style/_variables.scss" as *;',
         },
       },
     },
   },
+
   modules: [
     '@pinia/nuxt',
     [
@@ -18,12 +21,12 @@ export default defineNuxtConfig({
         locales: [
           {
             code: 'en',
-            iso: 'en-US',
+            language: 'en-US',
             file: 'en-US.ts',
           },
           {
             code: 'fr',
-            iso: 'fr-FR',
+            language: 'fr-FR',
             file: 'fr-FR.ts',
           },
         ],
@@ -33,6 +36,7 @@ export default defineNuxtConfig({
       },
     ],
   ],
+
   components: [
     {
       path: '~/components/_UI',
@@ -41,4 +45,6 @@ export default defineNuxtConfig({
     },
     '~/components',
   ],
+
+  compatibilityDate: '2024-11-16',
 })
