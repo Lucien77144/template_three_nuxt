@@ -16,6 +16,16 @@ export default defineNuxtConfig({
   modules: [
     '@pinia/nuxt',
     [
+      '@nuxtjs/google-fonts',
+      {
+        families: {
+          Lato: [500, 700, 800],
+          download: true,
+          inject: true,
+        },
+      },
+    ],
+    [
       '@nuxtjs/i18n',
       {
         locales: [
