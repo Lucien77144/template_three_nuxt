@@ -7,10 +7,10 @@ import type {
   TSceneNavigation,
   TScenes,
 } from '~/models/utils/SceneManager.model'
-import type AbstractScene from '../Modules/Abstract/AbstractScene'
 import type Renderer from '../Modules/Renderer/Renderer'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
 import runMethod from '~/utils/runMethod'
+import type ExtendableScene from '../Modules/Extendables/ExtendableScene'
 
 const SCENES = scenes as TScenes
 
@@ -19,8 +19,8 @@ export default class SceneManager {
   public scenes: TScenes
   public scale: number
   public start: number
-  public active?: AbstractScene
-  public next?: AbstractScene
+  public active?: ExtendableScene
+  public next?: ExtendableScene
 
   // Private
   private _experience: Experience

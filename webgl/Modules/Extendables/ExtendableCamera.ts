@@ -18,7 +18,7 @@ import ExtendableItem from './ExtendableItem'
  * @param {TDebugFolder} debugFolder Debug controls folder
  * @param {Array} pendingAudios Queue of audio to be added when listener is ready
  */
-export default abstract class ExtendableCamera {
+export default class ExtendableCamera {
   // Public
   public instance!: PerspectiveCamera
   public listener?: AudioListener

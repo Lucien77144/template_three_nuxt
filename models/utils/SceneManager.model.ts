@@ -1,4 +1,4 @@
-import type AbstractScene from '~/webgl/Modules/Abstract/AbstractScene'
+import type ExtendableScene from '~/webgl/Modules/Extendables/ExtendableScene'
 import type { TExperienceStore } from '../stores/experience.store.model'
 
 /**
@@ -8,7 +8,7 @@ export type TSceneInfos = {
   id?: number
   isDefault?: boolean
   name?: string
-  Scene: { new (): AbstractScene }
+  Scene: { new (): ExtendableScene }
   nav?: {
     scale: number
     start?: number

@@ -6,9 +6,9 @@ import {
 } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 import type { Dictionary } from '~/models/functions/dictionary.model'
 import Experience from '~/webgl/Experience'
-import type AbstractScene from '../Modules/Abstract/AbstractScene'
-import type AbstractCamera from '../Modules/Abstract/AbstractCamera'
 import type { ICSS3DRendererStore } from '~/models/stores/cssRenderer.store.model'
+import type ExtendableScene from '../Modules/Extendables/ExtendableScene'
+import type ExtendableCamera from '../Modules/Extendables/ExtendableCamera'
 
 /**
  * CSS 3D Manager
@@ -27,16 +27,16 @@ export default class CSS3DManager {
   private $bus: Experience['$bus']
   private _viewport: Experience['viewport']
   private _store: Experience['store']
-  private _scene: AbstractScene['scene']
-  private _camera: AbstractCamera['instance']
+  private _scene: ExtendableScene['scene']
+  private _camera: ExtendableCamera['instance']
   private _handleAdd: (item: ICSS3DRendererStore) => void
 
   /**
    * Constructor
    * @param {Scene} scene Scene
-   * @param {AbstractCamera} camera Camera
+   * @param {ExtendableCamera} camera Camera
    */
-  constructor(scene: Scene, camera: AbstractCamera['instance']) {
+  constructor(scene: Scene, camera: ExtendableCamera['instance']) {
     // Public
     this.list = {}
 
