@@ -10,8 +10,6 @@
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
-    "@nuxtjs/sanity": "^1.13.0",
-    "@sanity/types": "^3.50.0",
     "@types/node": "^18.17.14",
     "@types/three": "^0.160.0",
     "nuxt": "^3.14.1592",
@@ -23,9 +21,6 @@
     "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/i18n": "^8.5.6",
     "@pinia/nuxt": "^0.5.5",
-    "@portabletext/vue": "^1.0.7",
-    "@sanity/image-url": "^1.0.2",
-    "groq": "^3.9.1",
     "gsap": "^3.12.5",
     "mitt": "^3.0.1",
     "pinia": "^2.2.6",
