@@ -16,6 +16,7 @@ export default defineNuxtConfig({
   modules: [
     '@pinia/nuxt',
     '@nuxtjs/i18n',
+    '@nuxtjs/sanity',
     [
       '@nuxtjs/google-fonts',
       {
@@ -27,6 +28,7 @@ export default defineNuxtConfig({
       },
     ],
   ],
+
   i18n: {
     locales: [
       {
@@ -56,6 +58,7 @@ export default defineNuxtConfig({
     },
     '~/components',
   ],
+
   sanity: {
     projectId: process.env.NUXT_SANITY_PROJECT_ID,
     dataset: process.env.NUXT_SANITY_DATASET,

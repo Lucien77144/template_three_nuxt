@@ -21,6 +21,7 @@
 	"dependencies": {
 		"@nuxtjs/google-fonts": "^3.2.0",
 		"@nuxtjs/i18n": "^9.2.1",
+		"@nuxtjs/sanity": "^1.0.0",
 		"@pinia/nuxt": "^0.10.1",
 		"@tweakpane/core": "^2.0.5",
 		"@tweakpane/plugin-essentials": "0.2.1",
