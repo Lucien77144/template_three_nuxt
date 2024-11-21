@@ -14,7 +14,12 @@
     "nuxt": "^3.14.1592",
     "sass": "^1.81.0",
     "vue": "^3.5.13",
-    "vue-router": "^4.4.5"
+    "vue-router": "^4.4.5",
+
+    "@sanity/types": "^3.50.0",
+    "@types/node": "^18.17.14",
+    "postcss": "^8.4.39",
+    "postcss-nested": "^6.0.1"
   },
   "dependencies": {
     "@nuxtjs/google-fonts": "^3.2.0",
@@ -26,6 +31,11 @@
     "stats.js": "^0.17.0",
     "three": "^0.160.1",
     "tweakpane": "^4.0.5",
-    "vue3-lottie": "^3.3.1"
+    "vue3-lottie": "^3.3.1",
+
+    "@nuxtjs/sanity": "^1.10.1",
+    "@portabletext/vue": "^1.0.7",
+    "@sanity/image-url": "^1.0.2",
+    "groq": "^3.9.1"
   }
 }
