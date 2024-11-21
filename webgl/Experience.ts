@@ -2,12 +2,14 @@ import Renderer from './Modules/Renderer/Renderer'
 import Time from './Utils/Time'
 import Resources from './Utils/Resources'
 import SceneManager from './Utils/SceneManager'
-import CursorManager from '../utils/CursorManager'
+import CursorManager from '~/utils/class/CursorManager'
 import { Raycaster } from 'three'
 import AudioManager from './Utils/AudioManager'
 import Debug from './Utils/Debug'
-import { KeysManager, ScrollManager, Viewport } from '#imports'
 import Store from './Utils/Store'
+import KeysManager from '~/utils/class/KeysManager'
+import ScrollManager, { type TScrollEvent } from '~/utils/class/ScrollManager'
+import Viewport from '~/utils/class/Viewport'
 
 type TOptions = {
   name?: string

@@ -14,7 +14,7 @@
 
 <script lang="ts" setup>
 import gsap from 'gsap'
-import clamp from '~/utils/functions/clamp'
+import clamp from '~/utils/clamp'
 
 // Refs
 const dragger = ref<HTMLElement>()

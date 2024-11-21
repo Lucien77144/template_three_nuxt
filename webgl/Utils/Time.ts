@@ -1,3 +1,4 @@
+import EventEmitter from '~/utils/class/EventEmitter'
 import Experience from '../Experience'
 
 /**

@@ -1,4 +1,4 @@
-import DragManager from '~/utils/DragManager'
+import DragManager from '~/utils/class/DragManager'
 import Experience from '../Experience'
 import Stats from './Stats'
 import type { Dictionary } from '~/models/functions/dictionary.model'

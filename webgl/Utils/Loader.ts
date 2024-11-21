@@ -15,6 +15,7 @@ import type {
   TResourceItem,
 } from '~/models/utils/Resources.model.js'
 import type { Dictionary } from '~/models/functions/dictionary.model.js'
+import EventEmitter from '~/utils/class/EventEmitter.js'
 
 /**
  * Setup i18n

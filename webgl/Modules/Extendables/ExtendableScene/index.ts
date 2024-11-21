@@ -1,54 +1,41 @@
-import {
-  Camera,
-  Group,
-  Object3D,
-  Scene,
-  Vector2,
-  type Intersection,
-} from 'three'
-import AbstractCamera from './AbstractCamera'
+import { Camera, Group, Object3D, Scene, type Intersection } from 'three'
+import ExtendableCamera from '../ExtendableCamera'
 import Experience from '~/webgl/Experience'
 import gsap from 'gsap'
 import CSS2DManager from '~/webgl/Utils/CSS2DManager'
 import CSS3DManager from '~/webgl/Utils/CSS3DManager'
 import type { Dictionary } from '~/models/functions/dictionary.model'
-import type AbstractItem from './AbstractItem'
-import type { TItemsFn } from './AbstractItem'
+import type ExtendableItem from '../ExtendableItem'
+import type { TItemsEvents } from '../ExtendableItem'
 import type { TAudioParams } from '~/models/utils/AudioManager.model'
-import { defined } from '~/utils/functions/defined'
 import type {
   ICSS2DRendererStore,
   ICSS3DRendererStore,
 } from '~/models/stores/cssRenderer.store.model'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
-import BasicPerspectiveCamera from '../Camera/BasicPerspectiveCamera'
+import type { TCursorEvent } from '~/utils/class/CursorManager'
+import runMethod from '~/utils/runMethod'
+import getMethod from '~/utils/getMethod'
+import type { ExtendableSceneEvents } from './ExtendableSceneEvents'
+import BasicPerspectiveCamera from '../../Basics/BasicPerspectiveCamera'
+
+export type TSceneEvents = keyof ExtendableSceneEvents
 
 /**
  * @class BasicScene
  *
  * @description Extendable class for scenes
- *
- * @function init Protected init function, automatically called after constructor
- * @function onInitComplete After switch between scene complete and this scene is the new one
- * @function onAfterRender After the scene has been built and rendered completely one time
- * @function onDisposeStart On transition start, before the dispose
- * @function update Update function called each frame
- * @function resize Resize function called on window resize
- * @function dispose Dispose function to clean up the scene
- * @function onScroll On scroll function
- * @function onMouseDownEvt Raycast on mouse down
- * @function onMouseUpEvt Raycast on mouse up
- * @function onMouseMoveEvt Raycast on mouse move
+ * @method TSceneFn Events can be implemented with SceneEvents
  *
  * @param {Scene} scene Three.js scene
- * @param {AbstractCamera} camera Camera instance
- * @param {Dictionary<AbstractItem>} components Scene components
- * @param {Dictionary<AbstractItem>} allComponents Flattened components including nested ones
+ * @param {ExtendCamera} camera Camera instance
+ * @param {Dictionary<ExtendableItem>} components Scene components
+ * @param {Dictionary<ExtendableItem>} allComponents Flattened components including nested ones
  * @param {Dictionary<TAudioParams>} audios Object of audios to add to the scene
  * @param {string} name Scene name
  * @param {boolean} wireframe Wireframe mode
- * @param {AbstractItem} hovered Currently hovered item
- * @param {AbstractItem} holded Currently held item
+ * @param {ExtendableItem} hovered Currently hovered item
+ * @param {ExtendableItem} holded Currently held item
  * @param {gsap.core.Tween} holdProgress Hold progress animation
  * @param {Experience} experience Experience reference
  * @param {Experience['cursorManager']} cursorManager Cursor manager reference
@@ -57,14 +44,18 @@ import BasicPerspectiveCamera from '../Camera/BasicPerspectiveCamera'
  * @param {Experience['$bus']} $bus Event bus reference
  * @param {Experience['debug']} debug Debug reference
  */
-export default abstract class AbstractScene {
+export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
+  // --------------------------------
   // Readonly properties
+  // --------------------------------
   /**
    * Scene name
    */
   readonly name: string
 
+  // --------------------------------
   // Public properties
+  // --------------------------------
   /**
    * Three.js scene
    */
@@ -72,15 +63,15 @@ export default abstract class AbstractScene {
   /**
    * BasicCamera instance
    */
-  public camera: AbstractCamera
+  public camera: ExtendableCamera
   /**
    * Scene components
    */
-  public components: Dictionary<AbstractItem>
+  public components: Dictionary<ExtendableItem>
   /**
    * Flattened components including nested ones
    */
-  public allComponents: Dictionary<AbstractItem>
+  public allComponents: Dictionary<ExtendableItem>
   /**
    * Object of audios to add to the scene
    */
@@ -92,11 +83,11 @@ export default abstract class AbstractScene {
   /**
    * Currently hovered item
    */
-  public hovered?: AbstractItem
+  public hovered?: ExtendableItem
   /**
    * Currently held item
    */
-  public holded?: AbstractItem
+  public holded?: ExtendableItem
   /**
    * Hold progress animation
    */
@@ -105,21 +96,10 @@ export default abstract class AbstractScene {
    * Debug folder
    */
   public debugFolder?: TDebugFolder
-  /**
-   * On scroll function
-   * @param {number} delta - Delta of the scroll
-   */
-  abstract onScroll(delta: number): any
-  /**
-   * On transition start, before the dispose
-   */
-  abstract onDisposeStart(): any
-  /**
-   * After the scene has been built and rendered completely one time
-   */
-  abstract onAfterRender(): any
 
+  // --------------------------------
   // Protected properties
+  // --------------------------------
   /**
    * Experience reference
    */
@@ -145,7 +125,9 @@ export default abstract class AbstractScene {
    */
   protected debug: Experience['debug']
 
+  // --------------------------------
   // Private properties
+  // --------------------------------
   private _css2dManager?: CSS2DManager
   private _css3dManager?: CSS3DManager
 
@@ -175,10 +157,10 @@ export default abstract class AbstractScene {
     this.wireframe = false
 
     // Events
-    this._handleMouseDownEvt = this.onMouseDownEvt.bind(this)
-    this._handleMouseUpEvt = this.onMouseUpEvt.bind(this)
-    this._handleMouseMoveEvt = this.onMouseMoveEvt.bind(this)
-    this._handleScrollEvt = this.onScrollEvt.bind(this)
+    this._handleMouseDownEvt = this.OnMouseDown.bind(this)
+    this._handleMouseUpEvt = this.OnMouseUp.bind(this)
+    this._handleMouseMoveEvt = this.OnMouseMove.bind(this)
+    this._handleScrollEvt = this.OnScroll.bind(this)
 
     this.components = {}
     this.audios = {}
@@ -192,7 +174,7 @@ export default abstract class AbstractScene {
    * Add CSS2D to the item
    * @param {ICSS2DRendererStore} item
    */
-  public addCSS2D(item: ICSS2DRendererStore) {
+  public addCSS2D(item: ICSS2DRendererStore): void {
     this._css2dManager ??= new CSS2DManager(this.scene, this.camera.instance)
 
     this.store.css2DList.push({
@@ -205,7 +187,7 @@ export default abstract class AbstractScene {
    * Add CSS3D to the item
    * @param {ICSS3DRendererStore} item
    */
-  public addCSS3D(item: ICSS3DRendererStore) {
+  public addCSS3D(item: ICSS3DRendererStore): void {
     this._css3dManager ??= new CSS3DManager(this.scene, this.camera.instance)
 
     this.store.css3DList.push({
@@ -218,7 +200,7 @@ export default abstract class AbstractScene {
    * remove CSS2D element
    * @param {string} id
    */
-  public removeCSS2D(id: string) {
+  public removeCSS2D(id: string): void {
     this.store.css2DList = this.store.css2DList.filter((el) => el.id != id)
   }
 
@@ -226,124 +208,107 @@ export default abstract class AbstractScene {
    * remove CSS3D element
    * @param {string} id
    */
-  public removeCSS3D(id: string) {
+  public removeCSS3D(id: string): void {
     this.store.css3DList = this.store.css3DList.filter((el) => el.id != id)
   }
 
+  // --------------------------------
+  // Events Functions
+  // --------------------------------
+
   /**
    * Raycast on mouse down
-   * @warn super.onMouseDownEvt() is needed in the child class
+   * @param event Mouse down event
+   * @warn super.onMouseDown() is needed in the extending class
    */
-  public onMouseDownEvt({ centered }: TCursorEvent) {
+  public OnMouseDown(event: TCursorEvent): void {
     // Clicked item
-    const clicked = this._getRaycastedItem(centered, ['onClick'])?.item
-    this._triggerFn(clicked, 'onClick')
+    const clicked = this._getRaycastedItem(event.centered, ['OnClick'])?.item
+    this._triggerFn(clicked, 'OnClick')
 
     // Holded item
-    this.holded = this._getRaycastedItem(centered, ['onHold'])?.item
+    this.holded = this._getRaycastedItem(event.centered, ['OnHold'])?.item
     this.holded && this._handleHold()
   }
 
   /**
    * Raycast on mouse up
-   * @warn super.onMouseUpEvt() is needed in the child class
+   * @param event Mouse up event
+   * @warn super.onMouseUp() is needed in the extending class
    */
-  public onMouseUpEvt() {
-    this.resetHolded()
+  public OnMouseUp(event: TCursorEvent): void {
+    this._resetHoldedItem()
   }
 
   /**
    * Raycast on mouse move
-   * @warn super.onMouseMoveEvt() is needed in the child class
+   * @param event Mouse move event
+   * @warn super.onMouseMove(event) is needed in the extending class
    */
-  public onMouseMoveEvt({ centered }: { centered: Vector2 }) {
+  public OnMouseMove(event: TCursorEvent): void {
     // Get hovered item
-    const hovered = this._getRaycastedItem(centered, [
-      'onMouseEnter',
-      'onMouseLeave',
+    const hovered = this._getRaycastedItem(event.centered, [
+      'OnMouseEnter',
+      'OnMouseLeave',
     ])?.item
 
     // On mouse move event
-    this._triggerFn(this, 'onMouseMove', centered)
+    this._triggerFn(this, 'OnMouseMove', event.centered)
     Object.values(this.allComponents).forEach((c) =>
-      this._triggerFn(c, 'onMouseMove', centered)
+      this._triggerFn(c, 'OnMouseMove', event.centered)
     )
 
     // On mouse hover event
-    const mouseHover = this._getRaycastedItem(centered, ['onMouseHover'])
-    this._triggerFn(mouseHover?.item, 'onMouseHover', {
-      centered,
+    const mouseHover = this._getRaycastedItem(event.centered, ['OnMouseHover'])
+    this._triggerFn(mouseHover?.item, 'OnMouseHover', {
+      centered: event.centered,
       target: mouseHover?.target,
     })
 
     // If mouse leave the hovered item, refresh the hovered item
     if (this.hovered?.item?.id !== hovered?.item?.id) {
-      this._triggerFn(this.hovered, 'onMouseLeave')
+      this._triggerFn(this.hovered, 'OnMouseLeave')
       this.hovered = hovered
-      this._triggerFn(this.hovered, 'onMouseEnter')
+      this._triggerFn(this.hovered, 'OnMouseEnter')
     }
     // Get holded item hovered
-    const holded = this._getRaycastedItem(centered, ['onHold'])?.item
+    const holded = this._getRaycastedItem(event.centered, ['OnHold'])?.item
     // If user leave the hold item, reset the holded item
     if (this.holded?.item?.id !== holded?.item?.id) {
-      this.resetHolded()
+      this._resetHoldedItem()
     }
   }
 
   /**
    * On scroll event
-   * @warn super.onScrollEvt(evt) is needed in the child class
+   * @param event Scroll event
+   * @warn super.onScroll(event) is needed in the extending class
    */
-  public onScrollEvt({ delta }: TCursorEvent) {
-    this._triggerFn(this, 'onScroll', delta)
+  public OnScroll(event: TCursorEvent): void {
+    this._triggerFn(this, 'OnScroll', event.delta)
     Object.values(this.allComponents).forEach((c) =>
-      this._triggerFn(c, 'onScroll', delta)
+      this._triggerFn(c, 'OnScroll', event.delta)
     )
   }
 
   /**
-   * Reset holded item
-   */
-  public resetHolded() {
-    this.holdProgress?.kill()
-    delete this.holded
-
-    const progress = { value: this.store.progress }
-    this.holdProgress = gsap.to(progress, {
-      value: 0,
-      duration: 1 * (progress.value / 100),
-      ease: 'easeInOut',
-      onUpdate: () => {
-        this.store.progress = progress.value
-      },
-      onComplete: () => {
-        setTimeout(() => {
-          this.store.progress = 0
-          this.holdProgress?.kill()
-          delete this.holded
-        })
-      },
-    })
-  }
-
-  /**
    * On switch between scene complete and this scene is the new one
-   * @warn super.onInitComplete() is needed in the child class
+   * @warn super.onInitComplete() is needed in the extending class
    */
-  public onInitComplete() {
+  public OnInitComplete(): void {
     // Trigger onInitComplete on all components
     Object.values(this.allComponents).forEach((c) =>
-      this._triggerFn(c, 'onInitComplete')
+      this._triggerFn(c, 'OnSceneInitComplete')
     )
   }
 
   /**
    * Update the scene
-   * @warn super.update() is needed in the child class
+   * @warn super.update() is needed in the extending class
    */
-  public update() {
+  public OnUpdate(): void {
     Object.values(this.allComponents).forEach((c) =>
-      this._triggerFn(c, 'update')
+      this._triggerFn(c, 'OnUpdate')
     )
 
     this.camera.update()
@@ -353,9 +318,9 @@ export default abstract class AbstractScene {
 
   /**
    * Resize the scene
-   * @warn super.resize() is needed in the child class
+   * @warn super.resize() is needed in the extending class
    */
-  public resize() {
+  public OnResize(): void {
     this.camera.resize()
     this._css2dManager?.resize()
     this._css3dManager?.resize()
@@ -363,12 +328,12 @@ export default abstract class AbstractScene {
 
   /**
    * Dispose the scene
-   * @warn super.dispose() is needed in the child class
+   * @warn super.dispose() is needed in the extending class
    */
-  public dispose() {
+  public OnDispose(): void {
     // Items
     Object.values(this.allComponents).forEach((c) => {
-      this._triggerFn(c, 'dispose')
+      this._triggerFn(c, 'OnDispose')
       this.scene.remove(c.item)
       this.camera.removeAudios(c.audios, true)
     })
@@ -392,16 +357,12 @@ export default abstract class AbstractScene {
     this.$bus.off('scroll', this._handleScrollEvt)
   }
 
-  // --------------------------------
-  // Protected Functions
-  // --------------------------------
-
   /**
    * Init the scene
    * Automatically called after the constructor
-   * @warn super.init() is needed in the child class
+   * @warn super.init() is needed in the extending class
    */
-  protected init() {
+  public OnInit(): void {
     this.allComponents = this._flattenComponents()
     this._addItemsToScene()
 
@@ -411,7 +372,9 @@ export default abstract class AbstractScene {
     this.scene.add(this.camera.instance)
     this._setEvents()
 
-    Object.values(this.allComponents).forEach((c) => c.afterSceneInit?.())
+    Object.values(this.allComponents).forEach((c) =>
+      runMethod(c, 'OnSceneInitComplete')
+    )
   }
 
   // --------------------------------
@@ -426,8 +389,8 @@ export default abstract class AbstractScene {
    */
   private _getRaycastedItem(
     centered: TCursorEvent['centered'],
-    fn: TItemsFn[] = []
-  ): { item: AbstractItem; target: Intersection } | void {
+    fn: TItemsEvents[] = []
+  ): { item: ExtendableItem; target: Intersection } | void {
     if (!this.raycaster) return
 
     this.raycaster.setFromCamera(centered, this.camera.instance as Camera)
@@ -435,7 +398,7 @@ export default abstract class AbstractScene {
     // Filter the components to only get the ones that have the functions in the fn array
     const list = Object.values(this.allComponents).filter((c) => {
       const funcs = fn.filter((f) => {
-        return c[f] && !c.disabledFn?.includes(f)
+        return getMethod(c, f) && !c.disabledFn?.includes(f)
       })
       return funcs.length > 0
     })
@@ -455,18 +418,18 @@ export default abstract class AbstractScene {
         ids.push(i.id)
       })
 
-      const isSet = fn.find((f) => !l.ignoredFn?.includes(f) && defined(l[f]))
+      const isSet = fn.find((f) => !l.ignoredFn?.includes(f) && getMethod(l, f))
       return ids.includes(target?.object?.id) && isSet
     })
 
-    const item: AbstractItem = match[match.length - 1]
+    const item: ExtendableItem = match[match.length - 1]
     return item && { item, target }
   }
 
   /**
    * Set debug
    */
-  private _setDebug() {
+  private _setDebug(): void {
     this.debugFolder = this.debug?.panel?.addFolder({
       expanded: false,
       title: this.name + ' (scene)',
@@ -484,7 +447,7 @@ export default abstract class AbstractScene {
   /**
    * Set events
    */
-  private _setEvents() {
+  private _setEvents(): void {
     this.cursorManager.on('mousedown', this._handleMouseDownEvt)
     this.cursorManager.on('mouseup', this._handleMouseUpEvt)
     this.cursorManager.on('mousemove', this._handleMouseMoveEvt)
@@ -494,7 +457,7 @@ export default abstract class AbstractScene {
   /**
    * Handle hold event
    */
-  private _handleHold() {
+  private _handleHold(): void {
     if (this.store.progress > 0 || !this.holded) return
 
     // Manage progression with store
@@ -507,8 +470,34 @@ export default abstract class AbstractScene {
         this.store.progress = progress.value
       },
       onComplete: () => {
-        this._triggerFn(this.holded, 'onHold')
-        this.resetHolded()
+        this._triggerFn(this.holded, 'OnHold', true)
+        this._resetHoldedItem()
+      },
+    })
+  }
+
+  /**
+   * Reset holded item
+   */
+  private _resetHoldedItem(): void {
+    this.holdProgress?.kill()
+    this._triggerFn(this.holded, 'OnHold', false)
+    delete this.holded
+
+    const progress = { value: this.store.progress }
+    this.holdProgress = gsap.to(progress, {
+      value: 0,
+      duration: 1 * (progress.value / 100),
+      ease: 'easeInOut',
+      onUpdate: () => {
+        this.store.progress = progress.value
+      },
+      onComplete: () => {
+        setTimeout(() => {
+          this.store.progress = 0
+          this.holdProgress?.kill()
+          delete this.holded
+        })
       },
     })
   }
@@ -517,16 +506,16 @@ export default abstract class AbstractScene {
    * Trigger item function (if not false)
    * @param {*} item Item to trigger
    * @param {*} fn Function to trigger
-   * @param {*} arg Argument to pass to the function
+   * @param {*} props Properties to send to the function
    */
-  private _triggerFn(item: any, fn: TItemsFn, arg?: any) {
-    item?.[fn] && item[fn](arg)
+  private _triggerFn(item: any, fn: TItemsEvents, props?: any): void {
+    getMethod(item, fn)?.(props)
   }
 
   /**
    * Add items to the scene
    */
-  private _addItemsToScene() {
+  private _addItemsToScene(): void {
     const items = this._getSceneItems(Object.values(this.components))
     if (items instanceof Object3D) {
       this.scene.add(items)
@@ -538,7 +527,9 @@ export default abstract class AbstractScene {
    * @param i - BasicItem to get the scene items
    * @returns Scene items
    */
-  private _getSceneItems(i: AbstractItem | AbstractItem[]): Object3D | void {
+  private _getSceneItems(
+    i: ExtendableItem | ExtendableItem[]
+  ): Object3D | void {
     // If the item is an array, create a group
     if (Array.isArray(i)) {
       const res = new Group()
@@ -550,7 +541,7 @@ export default abstract class AbstractScene {
     }
 
     // If the item has components, add them to a group
-    const components = Object.values(i.components || {}) as AbstractItem[]
+    const components = Object.values(i.components || {}) as ExtendableItem[]
     if (components.length > 0) {
       const res = new Group()
 
@@ -582,10 +573,10 @@ export default abstract class AbstractScene {
    * @returns Flattened components
    */
   private _flattenComponents(
-    c: Dictionary<AbstractItem> = this.components,
-    parent?: AbstractItem
-  ): Dictionary<AbstractItem> {
-    let res: Dictionary<AbstractItem> = {}
+    c: Dictionary<ExtendableItem> = this.components,
+    parent?: ExtendableItem
+  ): Dictionary<ExtendableItem> {
+    let res: Dictionary<ExtendableItem> = {}
 
     Object.keys(c).forEach((key) => {
       const value = c[key]
@@ -609,7 +600,7 @@ export default abstract class AbstractScene {
         value.parentComponent = parent
       }
 
-      value?.init?.()
+      runMethod(value, 'OnInit')
 
       if (value?.components) {
         res = {

@@ -1,115 +1,35 @@
 import { BufferGeometry, Group, InstancedMesh, Material, Object3D } from 'three'
 import Experience from '~/webgl/Experience'
-import type AbstractScene from './AbstractScene'
 import type { Dictionary } from '~/models/functions/dictionary.model'
 import type { TAudioParams } from '~/models/utils/AudioManager.model'
 import type { ICSS2DRendererStore } from '~/models/stores/cssRenderer.store.model'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
+import type { ExtendableItemEvents } from './ExtendableItemEvents'
+import type ExtendableScene from '../ExtendableScene'
 
 /**
  * Item functions type
  */
-export type TItemsFn =
-  | 'onHold'
-  | 'onClick'
-  | 'onMouseMove'
-  | 'onMouseHover'
-  | 'onMouseEnter'
-  | 'onMouseLeave'
-  | 'onScroll'
-  | 'onInitComplete'
-  | 'update'
-  | 'dispose'
+export type TItemsEvents = keyof ExtendableItemEvents
 
 /**
  * @class BasicItem
  *
  * @description Extandable class for items
+ * @method TItemsFn Events can be implemented with ItemEvents
  *
- * @function init Init function
- * @function onInitComplete After transition init function
- * @function afterSceneInit After the parent scene has been built
- * @function update If set, this function will be called on each tick to update
- * @function onClick If set, this function will be called on click item
- * @function onMouseMove If set, this function will be called on mouse down item
- * @function onMouseHover If set, this function will be called on mouse hover item
- * @function onMouseEnter If set, this function will be called on mouse enter item
- * @function onMouseLeave If set, this function will be called on mouse leave item
- * @function onHold If set, this function will be called on hold item
- * @function onScroll On scroll function
- *
- * @param { AbstractScene } parentScene Parent scene of the item
- * @param { AbstractItem } parentComponent Parent component of the item
+ * @param { ExtendScene } parentScene Parent scene of the item
+ * @param { ExtendableItem } parentComponent Parent component of the item
  * @param { Group | InstancedMesh | Object3D } item Item that will be added to the three scene
- * @param { Dictionary<AbstractItem> } components Child components of the item
+ * @param { Dictionary<ExtendableItem> } components Child components of the item
  * @param { Dictionary<TAudioParams> } audios Object of audios to add to the item (positionnal audio)
  * @param { TDebugFolder } debugFolder Debug folder
  * @param { number } holdDuration Duration after hold event is triggered
- * @param { TItemsFn[] } disabledFn Disable any functions of the item
+ * @param { TItemsEvents[] } disabledFn Disable any functions of the item
  * @param { Experience } experience Experience reference
  * @param { Experience['debug'] } debug Tweakpane debug reference
  */
-export default abstract class AbstractItem {
-  // --------------------------------
-  // Abstract functions
-  // --------------------------------
-  /**
-   * Init function
-   * Automatically called after the constructor
-   */
-  abstract init(): any
-  /**
-   * After transition init function
-   * Automatically called after the scene has been switched
-   */
-  abstract onInitComplete(): any
-  /**
-   * After the parent scene has been built
-   */
-  abstract afterSceneInit(): any
-  /**
-   * If set, this function will be called on each tick to update
-   * If false, the event will be ignored, even if parent is triggering it
-   */
-  abstract update(): any
-  /**
-   * If set, this function will be called on click item
-   * If false, the event will be ignored, even if parent is triggering it
-   */
-  abstract onClick(): any
-  /**
-   * If set, this function will be called on mouse down item
-   * If false, the event will be ignored, even if parent is triggering it
-   * @return {Object} - Object with the centered coordinates and the target values
-   */
-  abstract onMouseMove(): any
-  /**
-   * If set, this function will be called on mouse hover item
-   * If false, the event will be ignored, even if parent is triggering it
-   */
-  abstract onMouseHover(): any
-  /**
-   * If set, this function will be called on mouse enter item
-   * If false, the event will be ignored, even if parent is triggering it
-   */
-  abstract onMouseEnter(): any
-  /**
-   * If set, this function will be called on mouse leave item
-   * If false, the event will be ignored, even if parent is triggering it
-   */
-  abstract onMouseLeave(): any
-  /**
-   * If set, this function will be called on hold item
-   * If false, the event will be ignored, even if parent is triggering it
-   */
-  abstract onHold(): any
-  /**
-   * On scroll function
-   * If false, the event will be ignored, even if parent is triggering it
-   * @param {number} delta - Delta of the scroll
-   */
-  abstract onScroll(delta: number): any
-
+export default class ExtendableItem implements Partial<ExtendableItemEvents> {
   // --------------------------------
   // Public properties
   // --------------------------------
@@ -117,12 +37,12 @@ export default abstract class AbstractItem {
    * Parent scene of the item
    * @description Null in the constructor
    */
-  public parentScene?: AbstractScene
+  public parentScene?: ExtendableScene
   /**
    * Parent component of the item
    * @description Null in the constructor
    */
-  public parentComponent?: AbstractItem
+  public parentComponent?: ExtendableItem
   /**
    * Item that will be added to the three scene
    */
@@ -131,7 +51,7 @@ export default abstract class AbstractItem {
    * Child components of the item
    * @description Will replace item by a group (including item) and add components to it
    */
-  public components: Dictionary<AbstractItem>
+  public components: Dictionary<ExtendableItem>
   /**
    * Object of audios to add to the item (positionnal audio)
    */
@@ -148,12 +68,12 @@ export default abstract class AbstractItem {
    * Disable any functions of the item
    * @description Array of functions to disable
    */
-  public disabledFn: TItemsFn[]
+  public disabledFn: TItemsEvents[]
   /**
    * Ignore any functions of the item
    * @description Array of functions to disable, instead of disabledFn, this will not disable the function for child components.
    */
-  public ignoredFn: TItemsFn[]
+  public ignoredFn: TItemsEvents[]
 
   // --------------------------------
   // Protected properties
@@ -257,10 +177,11 @@ export default abstract class AbstractItem {
 
   /**
    * Dispose function to remove the item
-   * @warn super.dispose() is needed in the child class
+   * @warn super.dispose() is needed in the extending class
    */
-  public dispose() {
+  public OnDispose() {
     // Debug
     this.debugFolder && this.debug?.panel?.remove?.(this.debugFolder)
+    this.item && this.parentScene?.scene.remove?.(this.item)
   }
 }

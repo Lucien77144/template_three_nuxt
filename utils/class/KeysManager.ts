@@ -1,3 +1,5 @@
+import EventEmitter from './EventEmitter'
+
 export default class KeysManager extends EventEmitter {
   // Public
   public el: HTMLElement | Window

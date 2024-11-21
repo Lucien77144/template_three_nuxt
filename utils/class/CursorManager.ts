@@ -1,54 +1,76 @@
-import { Vector2 } from 'three'
+import type Experience from '~/webgl/Experience'
 import Viewport from './Viewport'
+import { Vector2 } from 'three'
+import EventEmitter from './EventEmitter'
 
-type TDragEvents = 'dragstart' | 'drag' | 'dragend' | 'tap'
+type Vector2Events =
+  | 'mousedown'
+  | 'mousemove'
+  | 'mouseup'
+  | 'mouseenter'
+  | 'mouseleave'
+  | 'touchstart'
+  | 'touchmove'
+  | 'touchend'
 
-export type TDragEvent = {
-  position: Vector2
-  delta: Vector2
-  normalized: Vector2
+export type TCursorEvent = {
   centered: Vector2
+  normalized: Vector2
+  position: Vector2
+  delta?: Vector2
 }
 
-const TAP_TRESHOLD: number = 2
-
-export default class DragManager extends EventEmitter {
+export default class CursorManager extends EventEmitter {
   // Public
   public el: HTMLElement | Window
   public enabled: boolean
-  public drag: boolean
-  public viewport: Viewport
   public position: Vector2
   public normalized: Vector2
   public centered: Vector2
-  public start: Vector2
-  public delta: Vector2
+  public enableBus: boolean
 
   // Private
+  private _viewport: Viewport
   private _handleMouseDown!: (e: Event) => void
   private _handleMouseMove!: (e: Event) => void
   private _handleMouseUp!: (e: Event) => void
+  private _handleMouseEnter!: (e: Event) => void
+  private _handleMouseLeave!: (e: Event) => void
   private _handleTouchStart!: (e: Event) => void
   private _handleTouchMove!: (e: Event) => void
   private _handleTouchUp!: (e: Event) => void
 
+  // Nuxt
+  private $bus: Experience['$bus']
+
   /**
    * Constructor
+   * @param _options Options
+   * @param _options.el Element to attach the cursor to (default: window)
+   * @param _options.enabled Enable the cursor (default: true)
+   * @param _options.enableBus Enable the bus (default: false)
    */
-  constructor(_options?: { el?: HTMLElement | Window }) {
+  constructor(_options?: {
+    el?: HTMLElement | Window
+    enabled?: boolean
+    enableBus?: boolean
+  }) {
     super()
 
     // Public
     this.el = _options?.el || window
-    this.enabled = true
-    this.drag = false
-    this.viewport = new Viewport()
-    this.position = new Vector2(0)
-    this.normalized = new Vector2(0)
-    this.centered = new Vector2(0)
-    this.start = new Vector2(0)
-    this.delta = new Vector2(0)
+    this.enabled = _options?.enabled ?? true
+    this.enableBus = !!_options?.enableBus
+    this._viewport = new Viewport()
 
+    this.position = new Vector2()
+    this.normalized = new Vector2()
+    this.centered = new Vector2()
+
+    // Nuxt
+    this.$bus = useNuxtApp().$bus
+
+    // Init
     this._initBinds()
     this._initEvents()
   }
@@ -87,13 +109,17 @@ export default class DragManager extends EventEmitter {
    * Setup binds for the cursor
    */
   private _initBinds(): void {
-    // Desktop
+    // Bureau
     this._handleMouseDown = (e) =>
       this._onStart.bind(this)(this._getVec2Values(e as MouseEvent))
     this._handleMouseMove = (e) =>
       this._onMove.bind(this)(this._getVec2Values(e as MouseEvent))
     this._handleMouseUp = (e) =>
       this._onEnd.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseEnter = (e) =>
+      this._onMouseEnter.bind(this)(this._getVec2Values(e as MouseEvent))
+    this._handleMouseLeave = (e) =>
+      this._onMouseLeave.bind(this)(this._getVec2Values(e as MouseEvent))
 
     // Mobile
     this._handleTouchStart = (e) =>
@@ -110,17 +136,19 @@ export default class DragManager extends EventEmitter {
   private _initEvents(): void {
     // Desktop
     this.el.addEventListener('mousedown', this._handleMouseDown)
-    window.addEventListener('mousemove', this._handleMouseMove)
-    window.addEventListener('mouseup', this._handleMouseUp)
+    this.el.addEventListener('mousemove', this._handleMouseMove)
+    this.el.addEventListener('mouseup', this._handleMouseUp)
+    this.el.addEventListener('mouseenter', this._handleMouseEnter)
+    this.el.addEventListener('mouseleave', this._handleMouseLeave)
 
     // Mobile
     this.el.addEventListener('touchstart', this._handleTouchStart, {
       passive: true,
     })
-    window.addEventListener('touchmove', this._handleTouchMove, {
+    this.el.addEventListener('touchmove', this._handleTouchMove, {
       passive: true,
     })
-    window.addEventListener('touchend', this._handleTouchUp, {
+    this.el.addEventListener('touchend', this._handleTouchUp, {
       passive: true,
     })
   }
@@ -130,13 +158,10 @@ export default class DragManager extends EventEmitter {
    * @param position Mouse position (x, y)
    */
   private _onStart(position: Vector2): void {
-    this.drag = true
+    this.position = position
 
-    this.start = position
-    this._handleEvent('dragstart', {
-      position,
-      delta: new Vector2(0),
-    })
+    this._handleEvent('mousedown', { position })
+    this._handleEvent('touchstart', { position })
   }
 
   /**
@@ -149,9 +174,9 @@ export default class DragManager extends EventEmitter {
       this.position.y - position.y
     )
     this.position = position
-    this.delta = delta
 
-    this.drag && this._handleEvent('drag', { position, delta })
+    this._handleEvent('mousemove', { position, delta })
+    this._handleEvent('touchmove', { position, delta })
   }
 
   /**
@@ -159,18 +184,24 @@ export default class DragManager extends EventEmitter {
    * @param position Mouse position (x, y)
    */
   private _onEnd(position: Vector2): void {
-    const delta = this.delta
-    const tap =
-      Math.abs(position.x - this.start.x) < TAP_TRESHOLD &&
-      Math.abs(position.y - this.start.y) < TAP_TRESHOLD
+    this._handleEvent('mouseup', { position })
+    this._handleEvent('touchend', { position })
+  }
 
-    if (this.drag && tap) {
-      this._handleEvent('tap', { position, delta })
-    } else {
-      this._handleEvent('dragend', { position, delta })
-    }
+  /**
+   * On position enter
+   * @param e Mouse event
+   */
+  private _onMouseEnter(position: Vector2): void {
+    this._handleEvent('mouseenter', { position })
+  }
 
-    this.drag = false
+  /**
+   * On position leave
+   * @param e  Mouse event
+   */
+  private _onMouseLeave(position: Vector2): void {
+    this._handleEvent('mouseleave', { position })
   }
 
   /**
@@ -180,7 +211,7 @@ export default class DragManager extends EventEmitter {
    * @param event Event type
    */
   private _handleEvent(
-    event: TDragEvents,
+    event: Vector2Events,
     params: {
       position: Vector2
       delta?: Vector2
@@ -192,21 +223,29 @@ export default class DragManager extends EventEmitter {
     this.position = params.position
 
     // Normalized
-    this.normalized.x = this.position.x / this.viewport.width
-    this.normalized.y = 1.0 - this.position.y / this.viewport.height
+    this.normalized.x = this.position.x / this._viewport.width
+    this.normalized.y = 1.0 - this.position.y / this._viewport.height
 
     // Centered
-    this.centered.x = (this.position.x / this.viewport.width) * 2 - 1
-    this.centered.y = -(this.position.y / this.viewport.height) * 2 + 1
+    this.centered.x = (this.position.x / this._viewport.width) * 2 - 1
+    this.centered.y = -(this.position.y / this._viewport.height) * 2 + 1
 
     // Emit event and pass the position, normalized and centered values
-    this.trigger(event, [
-      {
+    // Emit the event to the bus if it's enabled
+    if (this.enableBus) {
+      this.$bus.emit(event, {
         normalized: this.normalized,
         centered: this.centered,
         ...params,
-      },
-    ])
+      })
+    }
+
+    // Emit the event to the cursor manager
+    this.trigger(event, {
+      normalized: this.normalized,
+      centered: this.centered,
+      ...params,
+    })
   }
 
   /**
@@ -215,13 +254,15 @@ export default class DragManager extends EventEmitter {
   public dispose(): void {
     // Desktop
     this.el.removeEventListener('mousedown', this._handleMouseDown)
-    window.removeEventListener('mousemove', this._handleMouseMove)
-    window.removeEventListener('mouseup', this._handleMouseUp)
+    this.el.removeEventListener('mousemove', this._handleMouseMove)
+    this.el.removeEventListener('mouseup', this._handleMouseUp)
+    this.el.removeEventListener('mouseenter', this._handleMouseEnter)
+    this.el.removeEventListener('mouseleave', this._handleMouseLeave)
 
     // Mobile
     this.el.removeEventListener('touchstart', this._handleTouchStart)
-    window.removeEventListener('touchmove', this._handleTouchMove)
-    window.removeEventListener('touchend', this._handleTouchUp)
+    this.el.removeEventListener('touchmove', this._handleTouchMove)
+    this.el.removeEventListener('touchend', this._handleTouchUp)
   }
 
   // Getters and setters
@@ -231,13 +272,6 @@ export default class DragManager extends EventEmitter {
    */
   get isEnabled(): boolean {
     return this.enabled
-  }
-
-  /**
-   * Check if the cursor is dragging
-   */
-  get isDragging(): boolean {
-    return this.drag
   }
 
   /**

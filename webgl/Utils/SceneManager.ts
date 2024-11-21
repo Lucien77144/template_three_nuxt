@@ -10,6 +10,7 @@ import type {
 import type AbstractScene from '../Modules/Abstract/AbstractScene'
 import type Renderer from '../Modules/Renderer/Renderer'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
+import runMethod from '~/utils/runMethod'
 
 const SCENES = scenes as TScenes
 
@@ -106,7 +107,7 @@ export default class SceneManager {
     this.next = new nextInfos.Scene()
 
     // Switch function start on previous scene
-    this.active?.onDisposeStart?.()
+    runMethod(this.active, 'OnDisposeStart')
 
     // Update the store (and localstorage) with the new scene :
     this.navigate({
@@ -195,7 +196,7 @@ export default class SceneManager {
     this.active = new scene.Scene()
 
     // Switch complete function on the new scene
-    this.active?.onInitComplete?.()
+    runMethod(this.active, 'OnInitComplete')
 
     // Start navigation
     this.$bus?.on('scene:switch', (scene: TSceneInfos) => this.switch(scene))
@@ -223,24 +224,24 @@ export default class SceneManager {
    * Update
    */
   public update(): void {
-    this.active?.update()
-    this.next?.update()
+    runMethod(this.active, 'OnUpdate')
+    runMethod(this.next, 'OnUpdate')
   }
 
   /**
    * Resize
    */
   public resize(): void {
-    this.active?.resize()
-    this.next?.resize()
+    runMethod(this.active, 'OnResize')
+    runMethod(this.next, 'OnResize')
   }
 
   /**
    * Dispose
    */
   public dispose(): void {
-    this.active?.dispose()
-    this.next?.dispose()
+    runMethod(this.active, 'OnDispose')
+    runMethod(this.next, 'OnDispose')
   }
 
   /**
@@ -267,13 +268,13 @@ export default class SceneManager {
       this._debugScene.value = infos.name
       this._debugNavigation.disabled = false
     }
-    this.active?.dispose()
+    runMethod(this.active, 'OnDispose')
     this.active = this.next
     delete this.next
 
     // Switch complete function on the new scene
     this._scrollManager?.setDisable(false)
-    this.active?.onInitComplete?.()
+    runMethod(this.active, 'OnInitComplete')
   }
 
   /**

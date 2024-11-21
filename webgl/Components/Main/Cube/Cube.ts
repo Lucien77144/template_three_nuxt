@@ -1,9 +1,13 @@
-import type { ScrollManager } from '#imports'
 import { BoxGeometry, MathUtils, Mesh, MeshNormalMaterial } from 'three'
-import AbstractItem from '~/webgl/Modules/Abstract/AbstractItem'
 import { UIBtn } from '#components'
+import type ScrollManager from '~/utils/class/ScrollManager'
+import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem/'
+import { ExtendableItemEvents } from '~/webgl/Modules/Extendables/ExtendableItem/ExtendableItemEvents'
 
-export default abstract class Cube extends AbstractItem {
+export default class Cube
+  extends ExtendableItem
+  implements ExtendableItemEvents
+{
   private _scrollManager: ScrollManager
   private _geometry?: BoxGeometry
   private _material?: MeshNormalMaterial
@@ -55,24 +59,29 @@ export default abstract class Cube extends AbstractItem {
     this.item = this._mesh as Mesh
   }
 
-  /**
-   * On hold item
-   */
-  public onHold() {
-    console.log('holded after:', this.holdDuration, 'ms')
+  public OnHold(success: boolean) {
+    if (success) {
+      console.log(
+        'hold successfull with a duration of ',
+        this.holdDuration,
+        'ms'
+      )
+    } else {
+      console.log('hold canceled')
+    }
   }
 
   /**
    * On click item
    */
-  public onClick() {
+  public OnClick() {
     console.log('clicked')
   }
 
   /**
    * Update the cube
    */
-  public update() {
+  public OnUpdate() {
     this.item.rotation.y = MathUtils.lerp(
       this.item.rotation.y,
       this._scrollManager.current * 0.1,
@@ -80,10 +89,7 @@ export default abstract class Cube extends AbstractItem {
     )
   }
 
-  /**
-   * Init
-   */
-  public init(): void {
+  public OnInit(): void {
     this.setGeometry()
     this.setMaterial()
     this.setMesh()
@@ -96,8 +102,12 @@ export default abstract class Cube extends AbstractItem {
       position: this.item.position,
       data: {
         text: 'Click me',
-        onClick: () => this.onClick(),
+        onClick: () => this.OnClick(),
       },
     })
+  }
+
+  public override OnDispose(): void {
+    super.OnDispose()
   }
 }

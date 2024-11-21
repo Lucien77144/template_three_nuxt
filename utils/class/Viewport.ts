@@ -1,10 +1,8 @@
-import {
-  isDeviceMobile,
-  isDeviceMobileOrTablet,
-} from '~/utils/functions/device'
-import { breakpoint, breakpoints } from '~/utils/functions/breakpoints'
-import dpr from '~/utils/functions/dpr'
-import isTouch from '~/utils/functions/isTouch'
+import { isDeviceMobile, isDeviceMobileOrTablet } from '~/utils/device'
+import { breakpoint, breakpoints } from '~/utils/breakpoints'
+import dpr from '~/utils/dpr'
+import isTouch from '~/utils/isTouch'
+import EventEmitter from './EventEmitter'
 
 export default class Viewport extends EventEmitter {
   // Singleton

@@ -1,11 +1,11 @@
 import { AudioListener, PerspectiveCamera, Vector3 } from 'three'
-import Experience from '../../Experience'
+import Experience from '../../../Experience'
 import type { TAudioParams } from '~/models/utils/AudioManager.model'
-import type AbstractItem from './AbstractItem'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
+import ExtendableItem from '../ExtendableItem/'
 
 /**
- * @class BasicCamera
+ * @class Extend Camera
  *
  * @description Base camera class that handles perspective camera setup and audio listener
  *
@@ -18,13 +18,13 @@ import type { TDebugFolder } from '~/models/utils/Debug.model'
  * @param {TDebugFolder} debugFolder Debug controls folder
  * @param {Array} pendingAudios Queue of audio to be added when listener is ready
  */
-export default abstract class AbstractCamera {
+export default abstract class ExtendableCamera {
   // Public
   public instance!: PerspectiveCamera
   public listener?: AudioListener
   public debugFolder: TDebugFolder
   public pendingAudios: {
-    audios: AbstractItem['audios']
+    audios: ExtendableItem['audios']
     parent: TAudioParams['parent']
   }[]
 
@@ -63,7 +63,7 @@ export default abstract class AbstractCamera {
    * @param {*} parent Parent of the audio
    */
   public addAudios(
-    audios: AbstractItem['audios'] = {},
+    audios: ExtendableItem['audios'] = {},
     parent: TAudioParams['parent']
   ): void {
     if (!this.listener) {
@@ -89,7 +89,7 @@ export default abstract class AbstractCamera {
    * @param {*} force Force remove
    */
   public removeAudios(
-    audios: AbstractItem['audios'] = {},
+    audios: ExtendableItem['audios'] = {},
     force: boolean = false
   ) {
     // Filter by persist and no parents
@@ -100,7 +100,7 @@ export default abstract class AbstractCamera {
 
   /**
    * Update the camera
-   * @warn super.update() is needed in the child class
+   * @warn super.update() is needed in the extending class
    */
   public update() {
     if (!this.instance) return
@@ -110,7 +110,7 @@ export default abstract class AbstractCamera {
 
   /**
    * Resize the camera
-   * @warn super.resize() is needed in the child class
+   * @warn super.resize() is needed in the extending class
    */
   public resize() {
     if (!this.instance) return
@@ -121,7 +121,7 @@ export default abstract class AbstractCamera {
 
   /**
    * Dispose the camera
-   * @warn super.dispose() is needed in the child class
+   * @warn super.dispose() is needed in the extending class
    */
   public dispose() {
     if (!this.instance) return

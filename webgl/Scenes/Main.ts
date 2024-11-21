@@ -1,7 +1,11 @@
-import Cube from '../Components/Shared/Cube/Cube'
-import AbstractScene from '../Modules/Abstract/AbstractScene'
+import Cube from '../Components/Main/Cube/Cube'
+import ExtendableScene from '../Modules/Extendables/ExtendableScene'
+import type { ExtendableSceneEvents } from '../Modules/Extendables/ExtendableScene/ExtendableSceneEvents'
 
-export default class Main extends AbstractScene {
+export default class Main
+  extends ExtendableScene
+  implements ExtendableSceneEvents
+{
   /**
    * Constructor
    */
@@ -12,11 +16,11 @@ export default class Main extends AbstractScene {
     }
 
     // Init the scene
-    this.init()
+    this.OnInit()
   }
 
-  init() {
-    super.init()
+  public override OnInit() {
+    super.OnInit()
 
     this.camera.instance.position.z = 40
   }

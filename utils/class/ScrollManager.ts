@@ -1,7 +1,8 @@
 import { MathUtils } from 'three'
-import { isDeviceMobile } from '~/utils/functions/device'
-import DragManager, { type TDragEvent } from './DragManager'
+import { isDeviceMobile } from '~/utils/device'
 import Time from '~/webgl/Utils/Time'
+import EventEmitter from './EventEmitter'
+import DragManager, { type TDragEvent } from './DragManager'
 
 type TOptions = {
   limit?: { min: number; max: number }

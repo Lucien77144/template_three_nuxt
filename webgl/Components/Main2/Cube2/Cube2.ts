@@ -1,7 +1,11 @@
 import { BoxGeometry, Mesh, MeshToonMaterial } from 'three'
-import AbstractItem from '~/webgl/Modules/Abstract/AbstractItem'
+import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem'
+import { ExtendableItemEvents } from '~/webgl/Modules/Extendables/ExtendableItem/ExtendableItemEvents'
 
-export default abstract class Cube2 extends AbstractItem {
+export default class Cube2
+  extends ExtendableItem
+  implements ExtendableItemEvents
+{
   // Public
   public position: { x: number; y: number; z: number }
 
@@ -45,7 +49,7 @@ export default abstract class Cube2 extends AbstractItem {
   /**
    * Init
    */
-  public init() {
+  public OnInit() {
     this.setGeometry()
     this.setMaterial()
     this.setMesh()
