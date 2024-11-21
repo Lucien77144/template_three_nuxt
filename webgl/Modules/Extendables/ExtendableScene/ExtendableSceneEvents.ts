@@ -1,4 +1,4 @@
-import type { TCursorEvent } from '~/utils/class/CursorManager'
+import type { TCursorProps } from '~/utils/class/CursorManager'
 
 export class ExtendableSceneEvents {
   /**
@@ -33,25 +33,25 @@ export class ExtendableSceneEvents {
 
   /**
    * On scroll function
-   * @param {TCursorEvent} evt - Event of the scroll
+   * @param {TCursorProps} event - Event of the scroll
    */
-  public OnScroll?(evt: TCursorEvent): any
+  public OnScroll?(event: TCursorProps): any
 
   /**
    * On mouse down
-   * @param {TCursorEvent} evt - Event of the mouse down
+   * @param {TCursorProps} event - Event of the mouse down
    */
-  public OnMouseDown?(evt: TCursorEvent): any
+  public OnMouseDown?(event: TCursorProps): any
 
   /**
    * On mouse up
-   * @param {TCursorEvent} evt - Event of the mouse up
+   * @param {TCursorProps} event - Event of the mouse up
    */
-  public OnMouseUpEvt?(evt: TCursorEvent): any
+  public OnMouseUp?(event: TCursorProps): any
 
   /**
    * On mouse move over the scene
-   * @param {TCursorEvent} evt - Event of the mouse move
+   * @param {TCursorProps} event - Event of the mouse move
    */
-  public OnMouseMove?(evt: TCursorEvent): any
+  public OnMouseMove?(event: TCursorProps): any
 }

@@ -5,7 +5,7 @@
  * @returns Method result if exists
  */
 export default function getMethod(obj: any, name: string): any | void {
-  if (name in obj && typeof obj[name] === 'function') {
-    return obj[name]
+  if (obj && name in obj && typeof obj[name] === 'function') {
+    return obj[name]?.bind(obj)
   }
 }

@@ -13,12 +13,17 @@ import type {
   ICSS3DRendererStore,
 } from '~/models/stores/cssRenderer.store.model'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
-import type { TCursorEvent } from '~/utils/class/CursorManager'
+import type { TCursorProps } from '~/utils/class/CursorManager'
 import runMethod from '~/utils/runMethod'
 import getMethod from '~/utils/getMethod'
 import type { ExtendableSceneEvents } from './ExtendableSceneEvents'
 import BasicPerspectiveCamera from '../../Basics/BasicPerspectiveCamera'
+import type {
+  TMouseHoverProps,
+  TSuccessProp,
+} from '../ExtendableItem/ExtendableItemEvents'
 
+export type TFnProps = TCursorProps | TMouseHoverProps | TSuccessProp
 export type TSceneEvents = keyof ExtendableSceneEvents
 
 /**
@@ -132,10 +137,10 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
   private _css3dManager?: CSS3DManager
 
   // Private Handlers
-  private _handleMouseDownEvt: (e: TCursorEvent) => void
-  private _handleMouseUpEvt: (e: TCursorEvent) => void
-  private _handleMouseMoveEvt: (e: TCursorEvent) => void
-  private _handleScrollEvt: (e: TCursorEvent) => void
+  private _handleMouseDownEvt: (e: TCursorProps) => void
+  private _handleMouseUpEvt: (e: TCursorProps) => void
+  private _handleMouseMoveEvt: (e: TCursorProps) => void
+  private _handleScrollEvt: (e: TCursorProps) => void
 
   /**
    * Constructor
@@ -221,7 +226,7 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
    * @param event Mouse down event
    * @warn super.onMouseDown() is needed in the extending class
    */
-  public OnMouseDown(event: TCursorEvent): void {
+  public OnMouseDown(event: TCursorProps): void {
     // Clicked item
     const clicked = this._getRaycastedItem(event.centered, ['OnClick'])?.item
     this._triggerFn(clicked, 'OnClick')
@@ -236,7 +241,7 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
    * @param event Mouse up event
    * @warn super.onMouseUp() is needed in the extending class
    */
-  public OnMouseUp(event: TCursorEvent): void {
+  public OnMouseUp(event: TCursorProps): void {
     this._resetHoldedItem()
   }
 
@@ -245,7 +250,7 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
    * @param event Mouse move event
    * @warn super.onMouseMove(event) is needed in the extending class
    */
-  public OnMouseMove(event: TCursorEvent): void {
+  public OnMouseMove(event: TCursorProps): void {
     // Get hovered item
     const hovered = this._getRaycastedItem(event.centered, [
       'OnMouseEnter',
@@ -253,15 +258,14 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
     ])?.item
 
     // On mouse move event
-    this._triggerFn(this, 'OnMouseMove', event.centered)
     Object.values(this.allComponents).forEach((c) =>
-      this._triggerFn(c, 'OnMouseMove', event.centered)
+      this._triggerFn(c, 'OnMouseMove', event)
     )
 
     // On mouse hover event
     const mouseHover = this._getRaycastedItem(event.centered, ['OnMouseHover'])
     this._triggerFn(mouseHover?.item, 'OnMouseHover', {
-      centered: event.centered,
+      ...event,
       target: mouseHover?.target,
     })
 
@@ -284,10 +288,9 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
    * @param event Scroll event
    * @warn super.onScroll(event) is needed in the extending class
    */
-  public OnScroll(event: TCursorEvent): void {
-    this._triggerFn(this, 'OnScroll', event.delta)
+  public OnScroll(event: TCursorProps): void {
     Object.values(this.allComponents).forEach((c) =>
-      this._triggerFn(c, 'OnScroll', event.delta)
+      this._triggerFn(c, 'OnScroll', event)
     )
   }
 
@@ -388,7 +391,7 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
    * @returns Item triggered and target infos
    */
   private _getRaycastedItem(
-    centered: TCursorEvent['centered'],
+    centered: TCursorProps['centered'],
     fn: TItemsEvents[] = []
   ): { item: ExtendableItem; target: Intersection } | void {
     if (!this.raycaster) return
@@ -508,7 +511,7 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
    * @param {*} fn Function to trigger
    * @param {*} props Properties to send to the function
    */
-  private _triggerFn(item: any, fn: TItemsEvents, props?: any): void {
+  private _triggerFn(item: any, fn: TItemsEvents, props?: TFnProps): void {
     getMethod(item, fn)?.(props)
   }
 

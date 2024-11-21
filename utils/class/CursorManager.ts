@@ -1,6 +1,6 @@
 import type Experience from '~/webgl/Experience'
 import Viewport from './Viewport'
-import { Vector2 } from 'three'
+import { Object3D, Vector2, type Intersection } from 'three'
 import EventEmitter from './EventEmitter'
 
 type Vector2Events =
@@ -13,7 +13,7 @@ type Vector2Events =
   | 'touchmove'
   | 'touchend'
 
-export type TCursorEvent = {
+export type TCursorProps = {
   centered: Vector2
   normalized: Vector2
   position: Vector2

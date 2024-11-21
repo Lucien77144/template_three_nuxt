@@ -1,3 +1,9 @@
+import type { Intersection } from 'three'
+import type { TCursorProps } from '~/utils/class/CursorManager'
+
+export type TSuccessProp = boolean
+export type TMouseHoverProps = TCursorProps & { target: Intersection }
+
 export class ExtendableItemEvents {
   /**
    * Init function of the item
@@ -25,34 +31,37 @@ export class ExtendableItemEvents {
   /**
    * If set, this function will be called on mouse down item
    * If false, the event will be ignored, even if parent is triggering it
-   * @return {Object} - Object with the centered coordinates and the target values
+   * @param {TCursorProps} event - Event of the mouse down
    */
-  OnMouseMove?(): void
+  OnMouseMove?(event: TCursorProps): void
 
   /**
    * If set, this function will be called on mouse enter item
    * If false, the event will be ignored, even if parent is triggering it
+   * @param {TCursorProps} event - Event of the mouse enter
    */
-  OnMouseEnter?(): void
+  OnMouseEnter?(event: TCursorProps): void
 
   /**
    * If set, this function will be called on mouse hover item
    * If false, the event will be ignored, even if parent is triggering it
+   * @param {TMouseHoverProps} event - Event of the mouse hover
    */
-  OnMouseHover?(): void
+  OnMouseHover?(event: TMouseHoverProps): void
 
   /**
    * If set, this function will be called on mouse leave item
    * If false, the event will be ignored, even if parent is triggering it
+   * @param {TCursorProps} event - Event of the mouse leave
    */
-  OnMouseLeave?(): void
+  OnMouseLeave?(event: TCursorProps): void
 
   /**
    * On scroll function
    * If false, the event will be ignored, even if parent is triggering it
-   * @param {number} delta - Delta of the scroll
+   * @param {TCursorProps} event - Event of the scroll
    */
-  OnScroll?(delta: number): any
+  OnScroll?(event: TCursorProps): any
 
   /**
    * If set, this function will be called on click item
@@ -65,5 +74,5 @@ export class ExtendableItemEvents {
    * If false, the event will be ignored, even if parent is triggering it
    * @param {boolean} success - If the hold was successful
    */
-  OnHold?(success: boolean): void
+  OnHold?(success: TSuccessProp): void
 }

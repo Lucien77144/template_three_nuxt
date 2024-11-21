@@ -18,6 +18,7 @@ import vertexShader from './shaders/vertexShader.vert?raw'
 import fragmentShader from './shaders/fragmentShader.frag?raw'
 import type Debug from '~/webgl/Utils/Debug'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
+import type { TCursorProps } from '~/utils/class/CursorManager'
 
 type TClearColor = {
   color: string
@@ -47,7 +48,7 @@ export default class Renderer {
   private _time: Experience['time']
   private _stats: Debug['stats']
   private $bus: Experience['$bus']
-  private _handleMouseMoveEvt: (evt: { centered: Vector2 }) => void
+  private _handleMouseMoveEvt: (evt: TCursorProps) => void
 
   /**
    * Constructor
