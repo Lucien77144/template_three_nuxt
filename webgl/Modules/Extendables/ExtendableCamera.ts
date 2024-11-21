@@ -1,8 +1,8 @@
 import { AudioListener, PerspectiveCamera, Vector3 } from 'three'
-import Experience from '../../../Experience'
+import Experience from '../../Experience'
 import type { TAudioParams } from '~/models/utils/AudioManager.model'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
-import ExtendableItem from '../ExtendableItem/'
+import ExtendableItem from './ExtendableItem'
 
 /**
  * @class Extend Camera

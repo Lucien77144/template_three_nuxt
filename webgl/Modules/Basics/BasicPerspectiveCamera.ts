@@ -1,4 +1,4 @@
-import ExtendableCamera from '../Extendables/ExtendableCamera'
+import ExtendableCamera from '../Extendables/ExtendableCamera';
 
 export default class BasicPerspectiveCamera extends ExtendableCamera {
   constructor() {
