@@ -27,11 +27,6 @@
 
 <script setup lang="ts">
 import Experience from '~/webgl/Experience'
-import { type Post } from '~/types/Post'
-
-const query = groq`*[ _type == "post" && defined(slug.current) ] | order(_createdAt desc)`
-const { data: posts } = await useSanityQuery<Post[]>(query)
-console.log(posts)
 
 // Shallow Refs
 const exp = shallowRef<Experience | null>(null)
