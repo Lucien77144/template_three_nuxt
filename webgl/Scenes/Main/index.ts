@@ -1,6 +1,6 @@
-import Cube from '../Components/Main/Cube/Cube'
-import ExtendableScene from '../Modules/Extendables/ExtendableScene'
-import type { ExtendableSceneEvents } from '../Modules/Extendables/ExtendableScene/ExtendableSceneEvents'
+import ExtendableScene from '../../Modules/Extendables/ExtendableScene'
+import type { ExtendableSceneEvents } from '../../Modules/Extendables/ExtendableScene/ExtendableSceneEvents'
+import Cube from './Items/Cube'
 
 export default class Main
   extends ExtendableScene
