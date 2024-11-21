@@ -14,9 +14,6 @@ importers:
       '@nuxtjs/i18n':
         specifier: ^8.5.6
         version: 8.5.6(magicast@0.3.5)(rollup@4.27.3)(vue@3.5.13(typescript@5.6.3))
-      '@nuxtjs/sanity':
-        specifier: ^1.10.1
-        version: 1.13.0(magicast@0.3.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.27.3)
       '@pinia/nuxt':
         specifier: ^0.5.5
         version: 0.5.5(magicast@0.3.5)(rollup@4.27.3)(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))
@@ -51,6 +48,9 @@ importers:
         specifier: ^3.3.1
         version: 3.3.1(vue@3.5.13(typescript@5.6.3))
     devDependencies:
+      '@nuxtjs/sanity':
+        specifier: ^1.13.0
+        version: 1.13.0(magicast@0.3.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.27.3)
       '@sanity/types':
         specifier: ^3.50.0
         version: 3.64.2
@@ -63,12 +63,6 @@ importers:
       nuxt:
         specifier: ^3.14.1592
         version: 3.14.1592(@parcel/watcher@2.5.0)(@types/node@18.19.64)(ioredis@5.4.1)(magicast@0.3.5)(rollup@4.27.3)(sass@1.81.0)(terser@5.36.0)(typescript@5.6.3)(vite@5.4.11(@types/node@18.19.64)(sass@1.81.0)(terser@5.36.0))
-      postcss:
-        specifier: ^8.4.39
-        version: 8.4.49
-      postcss-nested:
-        specifier: ^6.0.1
-        version: 6.2.0(postcss@8.4.49)
       sass:
         specifier: ^1.81.0
         version: 1.81.0
@@ -2709,12 +2703,6 @@ packages:
     engines: {node: ^18.12.0 || ^20.9.0 || >=22.0}
     peerDependencies:
       postcss: ^8.4.31
-
-  postcss-nested@6.2.0:
-    resolution: {integrity: sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==}
-    engines: {node: '>=12.0'}
-    peerDependencies:
-      postcss: ^8.2.14
 
   postcss-normalize-charset@7.0.0:
     resolution: {integrity: sha512-ABisNUXMeZeDNzCQxPxBCkXexvBrUHV+p7/BXOY+ulxkcjUZO0cp8ekGBwvIh2LbCwnWbyMPNJVtBSdyhM2zYQ==}
@@ -6580,11 +6568,6 @@ snapshots:
   postcss-minify-selectors@7.0.4(postcss@8.4.49):
     dependencies:
       cssesc: 3.0.0
-      postcss: 8.4.49
-      postcss-selector-parser: 6.1.2
-
-  postcss-nested@6.2.0(postcss@8.4.49):
-    dependencies:
       postcss: 8.4.49
       postcss-selector-parser: 6.1.2
 
