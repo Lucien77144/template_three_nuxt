@@ -11,16 +11,13 @@ import type Renderer from '../Modules/Renderer/Renderer'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
 import runMethod from '~/utils/runMethod'
 import type ExtendableScene from '../Modules/Extendables/ExtendableScene'
+import EventEmitter from '~/utils/class/EventEmitter'
 
 const SCENES = scenes as TScenes
 
-export default class SceneManager {
+export default class SceneManager extends EventEmitter {
   // Public
   public scenes: TScenes
-  public scale: number
-  public start: number
-  public active?: ExtendableScene
-  public next?: ExtendableScene
 
   // Private
   private _experience: Experience
@@ -30,17 +27,23 @@ export default class SceneManager {
   private _debug: Experience['debug']
   private _debugNavigation?: TDebugFolder
   private _debugScene?: TDebugFolder
-  private _renderMesh?: Renderer['renderMesh']
+  private _renderShader?: Renderer['renderShader']
+  private _active?: ExtendableScene
+  private _next?: ExtendableScene
+  private _scale: number
+  private _start: number
   private $bus: Experience['$bus']
 
   /**
    * Constructor
    */
   constructor() {
+    super()
+
     // Public
     this.scenes = SCENES
-    this.scale = 0
-    this.start = 0
+    this._scale = 0
+    this._start = 0
 
     // Private
     this._experience = new Experience()
@@ -51,29 +54,36 @@ export default class SceneManager {
     this.$bus = this._experience.$bus
   }
 
-  /**
-   * Set scene in storage and navigation stores
-   * @param {TSceneInfos} scene Scene infos
-   */
-  public setScene(scene: TSceneInfos): void {
-    if (!this._debug || !this._debugScene) return
-    this._debugScene.value = scene.name
+  // Setters
+  set active(scene: ExtendableScene | undefined) {
+    this._active = scene
+    this.trigger('update:scene', { active: this.active, next: this.next })
+  }
+  set next(scene: ExtendableScene | undefined) {
+    this._next = scene
+    this.trigger('update:scene', { active: this.active, next: this.next })
+  }
+  set scale(scale: number) {
+    this._scale = scale
+    this.trigger('update:scale', scale)
+  }
+  set start(start: number) {
+    this._start = start
+    this.trigger('update:start', start)
   }
 
-  /**
-   * Set scale
-   * @param {number} scale
-   */
-  public setScale(scale: number): void {
-    this.scale = scale
+  // Getters
+  get active(): ExtendableScene | undefined {
+    return this._active
   }
-
-  /**
-   * Set start
-   * @param {number} start
-   */
-  public setStart(start: number): void {
-    this.start = start
+  get next(): ExtendableScene | undefined {
+    return this._next
+  }
+  get scale(): number {
+    return this._scale
+  }
+  get start(): number {
+    return this._start
   }
 
   /**
@@ -82,11 +92,22 @@ export default class SceneManager {
    */
   public navigate({ scroll, navigation }: TSceneNavigation): void {
     scroll && this._scrollManager?.to(scroll)
-    navigation && this._setNavigation(navigation)
 
-    navigation?.scene && this.setScene(navigation.scene)
-    navigation?.scale && this.setScale(navigation.scale)
-    navigation?.start && this.setStart(navigation.start)
+    if (navigation) {
+      this._store.navigation = navigation
+    }
+
+    if (navigation?.scene && this._debugScene) {
+      this._debugScene.value = navigation.scene.name
+    }
+
+    if (navigation?.scale) {
+      this.scale = navigation.scale
+    }
+
+    if (navigation?.start) {
+      this.start = navigation.start
+    }
   }
 
   /**
@@ -120,8 +141,8 @@ export default class SceneManager {
 
     // Add render mesh if unset :
     const transition = nextInfos.transition
-    this._renderMesh ??= this._renderer?.renderMesh
-    if (!this._renderMesh) return
+    this._renderShader ??= this._renderer?.renderShader
+    if (!this._renderShader) return
 
     // Get current scroll value
     const scroll = this._scrollManager?.current ?? 0
@@ -130,17 +151,17 @@ export default class SceneManager {
     const nextIndex = this._findIndexByName(nextInfos.name)
     const previousIndex = this._findIndexByName(previous)
     const diff = nextIndex - previousIndex
-    this._renderMesh.material.uniforms.uDirection.value = Math.sign(diff)
+    this._renderShader.uniforms.uDirection.value = Math.sign(diff)
 
     const isHalf = { value: false }
     const duration = transition?.duration ? transition.duration / 1000 : 1000
-    gsap.to(this._renderMesh?.material.uniforms.uTransition, {
+    gsap.to(this._renderShader.uniforms.uTransition, {
       value: 1,
       duration,
       ease: 'power1.inOut',
       onUpdate: () => {
         // Progression of the transition :
-        const progress = this._renderMesh?.material.uniforms.uTransition.value
+        const progress = this._renderShader?.uniforms.uTransition.value
 
         if (!isHalf.value && progress >= 0.5) {
           isHalf.value = true
@@ -259,8 +280,8 @@ export default class SceneManager {
     })
 
     // Reset transition uniform value :
-    if (this._renderMesh) {
-      this._renderMesh.material.uniforms.uTransition.value = 0
+    if (this._renderShader) {
+      this._renderShader.uniforms.uTransition.value = 0
     }
 
     // Reset params :
@@ -270,19 +291,11 @@ export default class SceneManager {
     }
     runMethod(this.active, 'OnDispose')
     this.active = this.next
-    delete this.next
+    this.next = undefined
 
     // Switch complete function on the new scene
     this._scrollManager?.setDisable(false)
     runMethod(this.active, 'OnInitComplete')
-  }
-
-  /**
-   * Set navigation in the store
-   * @param navigation
-   */
-  private _setNavigation(navigation: Experience['store']['navigation']): void {
-    this._store.navigation = navigation
   }
 
   /**

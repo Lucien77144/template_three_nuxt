@@ -24,6 +24,7 @@
     "gsap": "^3.12.5",
     "mitt": "^3.0.1",
     "pinia": "^2.2.6",
+    "postprocessing": "^6.36.4",
     "stats.js": "^0.17.0",
     "three": "^0.160.1",
     "tweakpane": "^4.0.5",

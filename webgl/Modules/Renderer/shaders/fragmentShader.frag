@@ -33,4 +33,6 @@ void main() {
     gl_FragColor = frag;
     #include <tonemapping_fragment> // To fix tonemapping problems when using render targets (only if tone mapping is enabled)
     #include <colorspace_fragment> // To fix colors problems when using render targets
+
+    gl_FragColor = scene0;
 }
