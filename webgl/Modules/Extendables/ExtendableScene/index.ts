@@ -17,7 +17,6 @@ import type { TCursorProps } from '~/utils/class/CursorManager'
 import runMethod from '~/utils/runMethod'
 import getMethod from '~/utils/getMethod'
 import type { ExtendableSceneEvents } from './ExtendableSceneEvents'
-import BasicPerspectiveCamera from '../../Basics/BasicPerspectiveCamera'
 import type {
   TMouseHoverProps,
   TSuccessProp,
@@ -156,7 +155,7 @@ export default class ExtendableScene implements Partial<ExtendableSceneEvents> {
 
     // Public
     this.scene = new Scene()
-    this.camera = new BasicPerspectiveCamera()
+    this.camera = new ExtendableCamera()
     this.allComponents = {}
     this.name = this.constructor.name
     this.wireframe = false
