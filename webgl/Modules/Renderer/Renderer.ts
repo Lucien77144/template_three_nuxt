@@ -148,7 +148,7 @@ export default class Renderer {
    * Set the render mesh
    */
   private _setRenderMesh() {
-    this.renderMesh = new Mesh(
+    this.renderMesh = new Mesh( // @TODO: replace with full screen mesh
       new PlaneGeometry(2, 2, 100, 100),
       new ShaderMaterial({
         uniforms: {
@@ -211,7 +211,7 @@ export default class Renderer {
       minFilter: LinearFilter,
       magFilter: LinearFilter,
       format: RGBAFormat,
-      samples: 1,
+      samples: 4, // @TODO: change with device
     })
     this.rt1 = this.rt0.clone()
   }
@@ -250,6 +250,7 @@ export default class Renderer {
     // RenderMesh
     this.instance.setRenderTarget(null)
     this.instance.render(this.renderMesh, this.camera)
+    // @TODO: check https://github.com/mattdesl/glsl-fxaa // QUOI QUE PMNDRS ? 
   }
 
   // --------------------------------
