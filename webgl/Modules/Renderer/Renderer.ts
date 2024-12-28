@@ -2,9 +2,6 @@ import {
   ACESFilmicToneMapping,
   Color,
   LinearFilter,
-  Mesh,
-  PerspectiveCamera,
-  PlaneGeometry,
   RGBAFormat,
   SRGBColorSpace,
   ShaderMaterial,
@@ -19,6 +16,7 @@ import fragmentShader from './shaders/fragmentShader.frag?raw'
 import type Debug from '~/webgl/Utils/Debug'
 import type { TDebugFolder } from '~/models/utils/Debug.model'
 import type { TCursorProps } from '~/utils/class/CursorManager'
+import { FullScreenQuad } from 'three/examples/jsm/Addons.js'
 
 type TClearColor = {
   color: string
@@ -33,10 +31,10 @@ const DEFAULT_CLEAR_COLOR: TClearColor = {
 export default class Renderer {
   // Public
   public instance!: WebGLRenderer
-  public camera!: PerspectiveCamera
   public rt0!: WebGLRenderTarget
   public rt1!: WebGLRenderTarget
-  public renderMesh!: Mesh & { material: ShaderMaterial }
+  public screenQuad!: FullScreenQuad
+  public renderMaterial!: ShaderMaterial
   public context!: WebGL2RenderingContext
   public debugFolder: TDebugFolder
   public clearColor: TClearColor
@@ -123,53 +121,39 @@ export default class Renderer {
   }
 
   /**
-   * Set the camera instance ONLY USED TO RENDER THE SCENE ON THE MESH
-   */
-  private _setCamera() {
-    this.camera = new PerspectiveCamera(
-      75,
-      this._viewport.width / this._viewport.height,
-      0.1,
-      100
-    )
-  }
-
-  /**
    * Raycast on mouse move
    */
   private _onMouseMoveEvt({ centered }: { centered: Vector2 }) {
-    this.renderMesh.material.uniforms.uCursor.value = new Vector2(
+    this.renderMaterial.uniforms.uCursor.value = new Vector2(
       centered.x / 2,
       centered.y / 2
     )
   }
 
   /**
-   * Set the render mesh
+   * Set the render material & quad
    */
-  private _setRenderMesh() {
-    this.renderMesh = new Mesh( // @TODO: replace with full screen mesh
-      new PlaneGeometry(2, 2, 100, 100),
-      new ShaderMaterial({
-        uniforms: {
-          // Scene gesture
-          uScene0: new Uniform(this.rt0.texture),
-          uScene1: new Uniform(this.rt1.texture),
-          uTransition: new Uniform(0),
-          uDirection: new Uniform(1),
+  private _initRender() {
+    this.renderMaterial = new ShaderMaterial({
+      uniforms: {
+        // Scene gesture
+        uScene0: new Uniform(this.rt0.texture),
+        uScene1: new Uniform(this.rt1.texture),
+        uTransition: new Uniform(0),
+        uDirection: new Uniform(1),
 
-          // Config
-          uTime: new Uniform(0),
-          uRatio: new Uniform(this._getVec2Ratio()),
-          uResolution: new Uniform(
-            new Vector2(this._viewport.width, this._viewport.height)
-          ),
-          uCursor: new Uniform(new Vector2(0.5)),
-        },
-        vertexShader,
-        fragmentShader,
-      })
-    )
+        // Config
+        uTime: new Uniform(0),
+        uRatio: new Uniform(this._getVec2Ratio()),
+        uResolution: new Uniform(
+          new Vector2(this._viewport.width, this._viewport.height)
+        ),
+        uCursor: new Uniform(new Vector2(0.5)),
+      },
+      vertexShader,
+      fragmentShader,
+    })
+    this.screenQuad = new FullScreenQuad(this.renderMaterial)
 
     this.$bus.on('mousemove', this._handleMouseMoveEvt)
   }
@@ -247,10 +231,11 @@ export default class Renderer {
       this.instance.render(next.scene, next.camera.instance)
     }
 
-    // RenderMesh
+    // ScreenQuad
     this.instance.setRenderTarget(null)
-    this.instance.render(this.renderMesh, this.camera)
-    // @TODO: check https://github.com/mattdesl/glsl-fxaa // QUOI QUE PMNDRS ? 
+    this.screenQuad.render(this.instance)
+    // @TODO: check https://github.com/mattdesl/glsl-fxaa // QUOI QUE PMNDRS ?
+    // @TODO: check https://stackoverflow.com/questions/79302824/rendering-multiple-composers-in-three-js
   }
 
   // --------------------------------
@@ -261,10 +246,9 @@ export default class Renderer {
    * Init the renderer
    */
   private _init() {
-    this._setCamera()
     this._setInstance(this._experience.canvas)
     this._setRenderTargets()
-    this._setRenderMesh()
+    this._initRender()
 
     // Debug
     if (this._debug) this._setDebug()
@@ -277,8 +261,8 @@ export default class Renderer {
     this._stats?.beforeRender()
 
     this._renderTargets()
-    if (this.renderMesh?.material.uniforms.uTime) {
-      this.renderMesh.material.uniforms.uTime.value = this._time.elapsed
+    if (this.renderMaterial.uniforms.uTime) {
+      this.renderMaterial.uniforms.uTime.value = this._time.elapsed
     }
 
     this._stats?.afterRender()
@@ -288,9 +272,6 @@ export default class Renderer {
    * Resize the renderer
    */
   public resize() {
-    this.camera.aspect = this._viewport.width / this._viewport.height
-    this.camera.updateProjectionMatrix()
-
     this.instance.setSize(this._viewport.width, this._viewport.height)
     this.instance.setPixelRatio(this._viewport.dpr)
 
@@ -298,11 +279,11 @@ export default class Renderer {
     this.rt0.setSize(size.width, size.height)
     this.rt1.setSize(size.width, size.height)
 
-    this.renderMesh.material.uniforms.uResolution.value = new Vector2(
+    this.renderMaterial.uniforms.uResolution.value = new Vector2(
       this._viewport.width,
       this._viewport.height
     )
-    this.renderMesh.material.uniforms.uRatio.value = this._getVec2Ratio()
+    this.renderMaterial.uniforms.uRatio.value = this._getVec2Ratio()
   }
 
   /**

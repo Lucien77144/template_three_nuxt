@@ -30,7 +30,7 @@ export default class SceneManager {
   private _debug: Experience['debug']
   private _debugNavigation?: TDebugFolder
   private _debugScene?: TDebugFolder
-  private _renderMesh?: Renderer['renderMesh']
+  private _renderMaterial: Renderer['renderMaterial']
   private $bus: Experience['$bus']
 
   /**
@@ -120,8 +120,8 @@ export default class SceneManager {
 
     // Add render mesh if unset :
     const transition = nextInfos.transition
-    this._renderMesh ??= this._renderer?.renderMesh
-    if (!this._renderMesh) return
+    this._renderMaterial ??= this._renderer?.renderMaterial
+    if (!this._renderMaterial) return
 
     // Get current scroll value
     const scroll = this._scrollManager?.current ?? 0
@@ -130,17 +130,17 @@ export default class SceneManager {
     const nextIndex = this._findIndexByName(nextInfos.name)
     const previousIndex = this._findIndexByName(previous)
     const diff = nextIndex - previousIndex
-    this._renderMesh.material.uniforms.uDirection.value = Math.sign(diff)
+    this._renderMaterial.uniforms.uDirection.value = Math.sign(diff)
 
     const isHalf = { value: false }
     const duration = transition?.duration ? transition.duration / 1000 : 1000
-    gsap.to(this._renderMesh?.material.uniforms.uTransition, {
+    gsap.to(this._renderMaterial.uniforms.uTransition, {
       value: 1,
       duration,
       ease: 'power1.inOut',
       onUpdate: () => {
         // Progression of the transition :
-        const progress = this._renderMesh?.material.uniforms.uTransition.value
+        const progress = this._renderMaterial.uniforms.uTransition.value
 
         if (!isHalf.value && progress >= 0.5) {
           isHalf.value = true
@@ -259,8 +259,8 @@ export default class SceneManager {
     })
 
     // Reset transition uniform value :
-    if (this._renderMesh) {
-      this._renderMesh.material.uniforms.uTransition.value = 0
+    if (this._renderMaterial) {
+      this._renderMaterial.uniforms.uTransition.value = 0
     }
 
     // Reset params :
