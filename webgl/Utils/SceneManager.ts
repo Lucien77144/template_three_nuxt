@@ -30,7 +30,7 @@ export default class SceneManager {
   private _debug: Experience['debug']
   private _debugNavigation?: TDebugFolder
   private _debugScene?: TDebugFolder
-  private _renderMaterial: Renderer['renderMaterial']
+  private _renderMesh?: Renderer['renderMesh']
   private $bus: Experience['$bus']
 
   /**
@@ -120,8 +120,8 @@ export default class SceneManager {
 
     // Add render mesh if unset :
     const transition = nextInfos.transition
-    this._renderMaterial ??= this._renderer?.renderMaterial
-    if (!this._renderMaterial) return
+    this._renderMesh ??= this._renderer?.renderMesh
+    if (!this._renderMesh) return
 
     // Get current scroll value
     const scroll = this._scrollManager?.current ?? 0
@@ -130,17 +130,17 @@ export default class SceneManager {
     const nextIndex = this._findIndexByName(nextInfos.name)
     const previousIndex = this._findIndexByName(previous)
     const diff = nextIndex - previousIndex
-    this._renderMaterial.uniforms.uDirection.value = Math.sign(diff)
+    this._renderMesh.material.uniforms.uDirection.value = Math.sign(diff)
 
     const isHalf = { value: false }
     const duration = transition?.duration ? transition.duration / 1000 : 1000
-    gsap.to(this._renderMaterial.uniforms.uTransition, {
+    gsap.to(this._renderMesh?.material.uniforms.uTransition, {
       value: 1,
       duration,
       ease: 'power1.inOut',
       onUpdate: () => {
         // Progression of the transition :
-        const progress = this._renderMaterial.uniforms.uTransition.value
+        const progress = this._renderMesh?.material.uniforms.uTransition.value
 
         if (!isHalf.value && progress >= 0.5) {
           isHalf.value = true
@@ -172,12 +172,10 @@ export default class SceneManager {
    * Init scene
    * @param {*} baseScene If set, initial scene name to load
    */
-  public init(baseScene?: string): Promise<void> {
-    // Set the scene name
-    const name = baseScene ?? this.scenes.default.name
-
+  public init(baseScene: string = this.scenes.default.name): Promise<void> {
     // Debug
-    if (this._debug && name) this._setDebug(name)
+    if (this._debug && baseScene) this._setDebug(baseScene)
+    const name = this._debugScene.value || baseScene
 
     // Get the scene from the store or the default one
     const scene = this._getSceneFromList(name)
@@ -208,7 +206,13 @@ export default class SceneManager {
       const camera = this.active?.camera.instance
       const renderer = this._renderer?.instance
 
-      if (!scene || !renderer || !camera) return resolve()
+      if (!scene || !renderer || !camera) {
+        return console.error('Scene, camera or renderer not found', {
+          scene,
+          camera,
+          renderer,
+        })
+      }
 
       scene.onAfterRender = () => {
         scene.onAfterRender = scene.onAfterRender
@@ -259,8 +263,8 @@ export default class SceneManager {
     })
 
     // Reset transition uniform value :
-    if (this._renderMaterial) {
-      this._renderMaterial.uniforms.uTransition.value = 0
+    if (this._renderMesh) {
+      this._renderMesh.material.uniforms.uTransition.value = 0
     }
 
     // Reset params :
@@ -317,7 +321,7 @@ export default class SceneManager {
     })
 
     // Persist the folder and enable it
-    this._debug?.persist(this._debugScene, persist.controller.value.rawValue)
+    this._debug?.persist(this._debugScene, !!persist.controller.value.rawValue)
     this._debugNavigation.disabled = false
 
     // Add switch event on change scene
