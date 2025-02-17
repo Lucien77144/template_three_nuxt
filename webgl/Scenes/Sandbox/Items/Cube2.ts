@@ -1,57 +1,70 @@
 import { BoxGeometry, Mesh, MeshToonMaterial } from 'three'
 import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem'
-import { ExtendableItemEvents } from '~/webgl/Modules/Extendables/ExtendableItem/ExtendableItemEvents'
+import type Sandbox from '../Sandbox'
 
-export default class Cube2
-	extends ExtendableItem
-	implements ExtendableItemEvents
-{
+export default class Cube2 extends ExtendableItem<Sandbox> {
 	// Public
 	public position: { x: number; y: number; z: number }
 
 	// Private
-	private _geometry?: BoxGeometry
-	private _material?: MeshToonMaterial
-	private _mesh?: Mesh
+	#geometry?: BoxGeometry
+	#material?: MeshToonMaterial
+	#mesh?: Mesh
 
 	/**
 	 * Constructor
+	 * @param options Options
+	 * @param options.position Position
 	 */
-	constructor(_options: { position: { x: number; y: number; z: number } }) {
+	constructor(options: { position: { x: number; y: number; z: number } }) {
 		super()
 
-		// New elements
+		// Public
 		this.holdDuration = 2000
-		this.position = _options.position
+		this.position = options.position
+
+		// Events
+		this.on('load', () => this.#onLoad())
 	}
+
+	// --------------------------------
+	// Events
+	// --------------------------------
+
+	/**
+	 * On load
+	 */
+	#onLoad() {
+		this.#setGeometry()
+		this.#setMaterial()
+		this.#setMesh()
+	}
+
+	// --------------------------------
+	// Private methods
+	// --------------------------------
 
 	/**
 	 * Set geometry
 	 */
-	public setGeometry() {
-		this._geometry = new BoxGeometry(4, 4, 4)
+	#setGeometry() {
+		this.#geometry = new BoxGeometry(4, 4, 4)
 	}
 
 	/**
 	 * Set material
 	 */
-	public setMaterial() {
-		this._material = new MeshToonMaterial({ color: 0x00ff00 })
-	}
-
-	public setMesh() {
-		this._mesh = new Mesh(this._geometry, this._material)
-		this._mesh.position.set(this.position.x, this.position.y, this.position.z)
-		this._mesh.scale.set(0.5, 0.5, 0.5)
-		this.item = this._mesh as Mesh
+	#setMaterial() {
+		this.#material = new MeshToonMaterial({ color: 0x00ff00 })
 	}
 
 	/**
-	 * Init
+	 * Set mesh
 	 */
-	public OnInit() {
-		this.setGeometry()
-		this.setMaterial()
-		this.setMesh()
+	#setMesh() {
+		this.#mesh = new Mesh(this.#geometry, this.#material)
+		this.#mesh.position.set(this.position.x, this.position.y, this.position.z)
+		this.#mesh.scale.set(0.5, 0.5, 0.5)
+		this.item.add(this.#mesh as Mesh)
 	}
 }

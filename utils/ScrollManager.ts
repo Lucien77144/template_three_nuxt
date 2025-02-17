@@ -17,9 +17,14 @@ export type TScrollEvent = {
 	delta: number
 	current: number
 	target: number
+	deltaTime?: number
 }
 
-export default class ScrollManager extends EventEmitter {
+export type TScrollManagerEvents = {
+	scroll: (event: TScrollEvent) => void
+}
+
+export default class ScrollManager extends EventEmitter<TScrollManagerEvents> {
 	// Public
 	public disabled: boolean
 	public speed: number
@@ -31,11 +36,19 @@ export default class ScrollManager extends EventEmitter {
 	public limit?: TOptions['limit']
 
 	// Private
-	private _time: Time
-	private _dragManager: DragManager
-	private _handleScroll: any
-	private _handleUpdate: any
+	#time: Time
+	#dragManager: DragManager
+	#handleScroll: any
+	#handleUpdate: any
+	#smoothDelta: number
+	#isScrolling: boolean
+	#scrollTimeout: NodeJS.Timeout | null
+	#baseInterval: number = 16.666 // 60 FPS comme référence pour le timing
 
+	/**
+	 * Constructor
+	 * @param options Options
+	 */
 	constructor({
 		limit,
 		speed,
@@ -57,40 +70,19 @@ export default class ScrollManager extends EventEmitter {
 		this.delta = 0
 
 		// Private
-		this._time = new Time()
-		this._dragManager = new DragManager()
+		this.#time = new Time()
+		this.#dragManager = new DragManager()
+		this.#smoothDelta = 0
+		this.#isScrolling = false
+		this.#scrollTimeout = null
 
 		// Init
-		this._init()
+		this.#init()
 	}
 
 	// ---------------------
 	// Public methods
 	// ---------------------
-
-	/**
-	 * Set the scroll speed
-	 * @param val Speed value
-	 */
-	public setSpeed(val: number) {
-		this.speed = val
-	}
-
-	/**
-	 * Set the scroll factor
-	 * @param val Factor value
-	 */
-	public setFactor(val: number) {
-		this.factor = val
-	}
-
-	/**
-	 * Disable/Enable the scroll manager
-	 * @param val Disable value
-	 */
-	public setDisable(val: boolean) {
-		this.disabled = val
-	}
 
 	/**
 	 * Go to a scroll position instantly
@@ -102,7 +94,7 @@ export default class ScrollManager extends EventEmitter {
 		if (instant) {
 			this.current = val
 		}
-		this._emit()
+		this.#emit()
 	}
 
 	// ---------------------
@@ -112,72 +104,65 @@ export default class ScrollManager extends EventEmitter {
 	/**
 	 * Set scroll detection events
 	 */
-	private _setScrollEvents() {
+	#setScrollEvents() {
 		let prev = -1
 		const firefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1
 		const isMobile = isDeviceMobile()
 
 		if (isMobile) {
-			this._handleScroll = (e: TDragEvent) => {
+			this.#handleScroll = (e: TDragEvent) => {
 				if (this.disabled) return
-
-				this.delta = e.delta.y * 10
-
-				this._updateTarget()
-				this._emit()
+				this.#handleScrollEvent((e.delta?.y ?? 0) * 10)
 			}
 
-			this._dragManager.on('drag', this._handleScroll)
+			this.#dragManager.on('drag', this.#handleScroll)
 		} else if (firefox) {
-			this._handleScroll = (e: WheelEvent) => {
+			this.#handleScroll = (e: WheelEvent) => {
 				if (this.disabled) return
-
-				this.delta =
+				const delta =
 					Math.sign(e.detail * 15) == Math.sign(prev) ? e.detail * 15 : 0
 				prev = e.detail
-
-				this._updateTarget()
-				this._emit()
+				this.#handleScrollEvent(delta)
 			}
 
-			window.addEventListener('DOMMouseScroll', this._handleScroll)
+			window.addEventListener('DOMMouseScroll', this.#handleScroll)
 		} else {
-			this._handleScroll = (e: WheelEvent) => {
+			this.#handleScroll = (e: WheelEvent) => {
 				if (this.disabled) return
-
-				this.delta = e.deltaY
-
-				this._updateTarget()
-				this._emit()
+				if (Math.abs(e.deltaY) > Math.abs(this.delta)) {
+					this.#handleScrollEvent(e.deltaY)
+				}
 			}
 
-			window.addEventListener('wheel', this._handleScroll)
+			window.addEventListener('wheel', this.#handleScroll)
 		}
 	}
 
 	/**
 	 * Scroll function to override
 	 */
-	private _emit() {
-		this.trigger('scroll', {
-			delta: this.delta,
+	#emit() {
+		const event = {
+			delta: this.#isScrolling ? this.#smoothDelta : this.delta,
 			current: this.current,
 			target: this.target,
-		})
+			deltaTime: this.#time.delta,
+		}
+		this.trigger('scroll', event)
 	}
 
 	/**
 	 * Set update event
 	 */
-	private _setUpdate() {
-		this._handleUpdate = this._update.bind(this)
-		this._time.on('tick', this._handleUpdate)
+	#setUpdate() {
+		this.#handleUpdate = this.#update.bind(this)
+		this.#time.on('tick', this.#handleUpdate)
 	}
 
 	/**
 	 * Update target value
 	 */
-	private _updateTarget() {
+	#updateTarget() {
 		this.target += this.delta * (this.factor / 100)
 
 		if (this.limit) {
@@ -188,30 +173,79 @@ export default class ScrollManager extends EventEmitter {
 	/**
 	 * Init the scroll manager
 	 */
-	private _init() {
-		this._setScrollEvents()
-		this._setUpdate()
+	#init() {
+		this.#setScrollEvents()
+		this.#setUpdate()
 	}
 
 	/**
 	 * Update values
 	 */
-	private _update() {
+	#update() {
 		if (this.disabled) return
 
+		const deltaTime = this.#time.delta
 		const prev = this.current
-		const current = MathUtils.lerp(this.current, this.target, this.speed)
+
+		// Facteur de lerp normalisé par rapport au temps
+		const lerpFactor = Math.min(
+			1,
+			this.speed * (deltaTime / this.#baseInterval)
+		)
+
+		const current = MathUtils.lerp(this.current, this.target, lerpFactor)
 		this.current = Math.floor(current * this.decimal) / this.decimal
 
-		if (this.current !== prev) this._emit()
+		if (this.delta !== 0) {
+			this.delta = MathUtils.lerp(this.delta, 0, lerpFactor)
+		}
+
+		if (this.current !== prev) {
+			this.#emit()
+		}
+	}
+
+	/**
+	 * Handle scroll event
+	 * @param delta Delta
+	 */
+	#handleScrollEvent(delta: number) {
+		if (this.disabled) return
+
+		// Normalisation du delta par rapport au temps de référence
+		const normalizedDelta = delta * (this.#baseInterval / this.#time.delta)
+
+		this.delta = normalizedDelta
+		this.#smoothDelta = MathUtils.lerp(this.#smoothDelta, normalizedDelta, 0.2)
+		this.#isScrolling = true
+
+		this.#updateTarget()
+		this.#emit()
+
+		if (this.#scrollTimeout) {
+			clearTimeout(this.#scrollTimeout)
+		}
+		this.#scrollTimeout = setTimeout(() => {
+			this.#isScrolling = false
+			this.#smoothDelta = 0
+		}, 150)
 	}
 
 	/**
 	 * Destroy the scroll manager
 	 */
 	public dispose() {
-		this._dragManager.dispose()
-		window.removeEventListener('DOMMouseScroll', this._handleScroll)
-		window.removeEventListener('wheel', this._handleScroll)
+		// Dispose events
+		this.disposeEvents()
+
+		// Dispose time
+		this.#time.dispose()
+
+		// Remove event listener
+		this.#dragManager.dispose()
+
+		// Remove event listener
+		window.removeEventListener('DOMMouseScroll', this.#handleScroll)
+		window.removeEventListener('wheel', this.#handleScroll)
 	}
 }

@@ -1,50 +1,57 @@
 import EventEmitter from './EventEmitter'
 
-export default class KeysManager extends EventEmitter {
+export type TKeysManagerEvents = {
+	keydown: (event: KeyboardEvent) => void
+	keyup: (event: KeyboardEvent) => void
+}
+
+export default class KeysManager extends EventEmitter<TKeysManagerEvents> {
 	// Public
 	public el: HTMLElement | Window
 	public enabled: boolean
 
 	// Private
-	private _handleKeyDown: any
-	private _handleKeyUp: any
+	#handleKeyDown: any
+	#handleKeyUp: any
 
 	/**
 	 * Constructor
+	 * @param options Options
+	 * @param options.el Element to attach the keys manager to (default: window)
 	 */
-	constructor(_options?: { el?: HTMLElement | Window }) {
+	constructor(options?: { el?: HTMLElement | Window }) {
 		super()
 
 		// Public
-		this.el = _options?.el || window
+		this.el = options?.el || window
 		this.enabled = true
 
 		// Init
-		this._initBinds()
-		this._initEvents()
+		this.#initBinds()
+		this.#initEvents()
 	}
 
 	/**
 	 * Setup binds for the cursor
 	 */
-	private _initBinds(): void {
-		this._handleKeyDown = (e: KeyboardEvent) => this._keyDown.bind(this)(e)
-		this._handleKeyUp = (e: KeyboardEvent) => this._keyUp.bind(this)(e)
+	#initBinds(): void {
+		this.#handleKeyDown = (e: KeyboardEvent) => this.#keyDown.bind(this)(e)
+		this.#handleKeyUp = (e: KeyboardEvent) => this.#keyUp.bind(this)(e)
 	}
 
 	/**
 	 * Setup events for the cursor
 	 */
-	private _initEvents(): void {
-		this.el.addEventListener('keydown', this._handleKeyDown)
-		this.el.addEventListener('keyup', this._handleKeyUp)
+	#initEvents(): void {
+		this.el.addEventListener('keydown', this.#handleKeyDown)
+		this.el.addEventListener('keyup', this.#handleKeyUp)
 	}
 
 	/**
 	 * On key down
 	 * @param evt Keyboard event
 	 */
-	private _keyDown(evt: KeyboardEvent): void {
+	#keyDown(evt: KeyboardEvent): void {
 		if (!this.enabled) return
 		this.trigger('keydown', evt)
 	}
@@ -53,7 +60,7 @@ export default class KeysManager extends EventEmitter {
 	 * On key up
 	 * @param evt Keyboard event
 	 */
-	private _keyUp(evt: KeyboardEvent): void {
+	#keyUp(evt: KeyboardEvent): void {
 		if (!this.enabled) return
 		this.trigger('keydown', evt)
 	}
@@ -62,8 +69,12 @@ export default class KeysManager extends EventEmitter {
 	 * Destroy the cursor and remove all events
 	 */
 	public dispose(): void {
-		this.el.removeEventListener('keydown', this._handleKeyDown)
-		this.el.removeEventListener('keyup', this._handleKeyUp)
+		// Dispose events
+		this.disposeEvents()
+
+		// Remove event listener
+		this.el.removeEventListener('keydown', this.#handleKeyDown)
+		this.el.removeEventListener('keyup', this.#handleKeyUp)
 	}
 
 	// Getters and setters

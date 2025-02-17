@@ -8,393 +8,472 @@ import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import type { TLocale } from '~/models/modules/locale.model.js'
 import type {
-  TExtension,
-  TLoader,
-  TResourceData,
-  TResourceFile,
-  TResourceItem,
+	TExtension,
+	TLoader,
+	TResourceData,
+	TResourceFile,
+	TResourceItem,
 } from '~/models/utils/Resources.model.js'
 import type { Dictionary } from '~/models/functions/dictionary.model.js'
 import EventEmitter from '~/utils/EventEmitter.js'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import {
-  DoubleSide,
-  Group,
-  Mesh,
-  MeshBasicMaterial,
-  ShapeGeometry,
-  Texture,
+	Color,
+	DoubleSide,
+	Mesh,
+	MeshBasicMaterial,
+	Object3D,
+	ShapeGeometry,
+	Texture,
 } from 'three'
+import { get3DSize } from '~/utils/functions/getSize.js'
 
-export default class Loader extends EventEmitter {
-  // Static
-  static _i18n: ReturnType<typeof useI18n>
+export type TLoaderEvents = {
+	loadingFileEnd: (event: {
+		resource: TResourceFile['resource']
+		data: TResourceData
+	}) => void
+	loadingGroupEnd: () => void
+}
 
-  // Public
-  public total: number
-  public loaded: number
-  public items: Dictionary<TResourceData>
+export default class Loader extends EventEmitter<TLoaderEvents> {
+	// Static
+	static #i18n: ReturnType<typeof useI18n>
 
-  // Private
-  private _experience: Experience
-  private _loaders: Array<TLoader>
-  private _store: Experience['store']
-  private $bus: Experience['$bus']
+	// Public
+	public total: number
+	public loaded: number
+	public items: Dictionary<TResourceData>
 
-  /**
-   * Constructor
-   */
-  constructor() {
-    super()
-    // Static
-    if (!Loader._i18n) {
-      Loader._i18n = useI18n()
-    }
+	// Private
+	#experience: Experience
+	#loaders: Array<TLoader>
+	#store: Experience['store']
+	private $bus: Experience['$bus']
 
-    // Public
-    this.total = 0
-    this.loaded = 0
-    this.items = {}
+	/**
+	 * Constructor
+	 */
+	constructor() {
+		super()
+		// Static
+		if (!Loader.#i18n) {
+			Loader.#i18n = useI18n() as unknown as ReturnType<typeof useI18n>
+		}
 
-    // Private
-    this._experience = new Experience()
-    this._loaders = []
-    this._store = this._experience.store
-    this.$bus = this._experience.$bus
+		// Public
+		this.total = 0
+		this.loaded = 0
+		this.items = {}
 
-    // Init
-    this._init()
-  }
+		// Private
+		this.#experience = new Experience()
+		this.#loaders = []
+		this.#store = this.#experience.store
+		this.$bus = this.#experience.$bus
 
-  /**
-   * Load
-   */
-  public load(resources: Array<TResourceItem> = []): void {
-    for (const resource of resources) {
-      this.total++
-      const extension = this._getExtension(resource.source)
+		// Init
+		this.#init()
+	}
 
-      if (typeof extension !== 'undefined') {
-        const loader = this._loaders.find((loader) =>
-          loader.extensions.find((e) => e === extension)
-        )
+	/**
+	 * Load
+	 */
+	public load(resources: Array<TResourceItem> = []): void {
+		for (const resource of resources) {
+			this.total++
+			const extension = this.#getExtension(resource.source)
 
-        if (loader) {
-          loader.action(resource)
-        } else {
-          console.warn(`Cannot found loader for ${resource}`)
-        }
-      } else {
-        console.warn(`Cannot found extension of ${resource}`)
-      }
-    }
-  }
+			if (typeof extension !== 'undefined') {
+				const loader = this.#loaders.find((loader) =>
+					loader.extensions.find((e) => e === extension)
+				)
 
-  /**
-   * Init loaders
-   */
-  private _init(): void {
-    // Images
-    this._loaders.push({
-      extensions: ['jpg', 'png', 'svg', 'webp'],
-      action: (resource) => {
-        const data = new Image()
+				if (loader) {
+					loader.action(resource)
+				} else {
+					console.warn(`Cannot found loader for ${resource}`)
+				}
+			} else {
+				console.warn(`Cannot found extension of ${resource}`)
+			}
+		}
+	}
 
-        data.addEventListener('load', () => {
-          const res = this._imageToTexture({ resource, data }) as Texture
-          this._fileLoadEnd(resource, res)
-        })
+	/**
+	 * Dispose the loader
+	 */
+	public dispose() {
+		// Dispose events
+		this.disposeEvents()
+	}
 
-        data.addEventListener('error', () => {
-          const res = this._imageToTexture({ resource, data }) as Texture
-          this._fileLoadEnd(resource, res)
-        })
+	/**
+	 * Init loaders
+	 */
+	#init(): void {
+		// Images
+		this.#loaders.push({
+			extensions: ['jpg', 'png', 'svg', 'webp'],
+			action: (resource) => {
+				const data = new Image()
 
-        data.src = resource.source
-      },
-    })
+				data.addEventListener('load', () => {
+					const res = this.#imageToTexture({ resource, data }) as Texture
+					this.#fileLoadEnd(resource, res)
+				})
 
-    // 3D SVG
-    const svgLoader = new SVGLoader()
-    this._loaders.push({
-      extensions: ['model.svg'],
-      action: (resource) => {
-        svgLoader.load(resource.source, (data) => {
-          const paths = data.paths
-          const group = new Group()
+				data.addEventListener('error', () => {
+					const res = this.#imageToTexture({ resource, data }) as Texture
+					this.#fileLoadEnd(resource, res)
+				})
 
-          paths.forEach((path) => {
-            const material = new MeshBasicMaterial({
-              color: path.color,
-              side: DoubleSide,
-              depthWrite: false,
-            })
+				data.src = resource.source
+			},
+		})
 
-            const shapes = SVGLoader.createShapes(path)
-            shapes.forEach((shape) => {
-              const geometry = new ShapeGeometry(shape)
-              const mesh = new Mesh(geometry, material)
-              group.add(mesh)
-            })
-          })
+		// 3D SVG
+		const svgLoader = new SVGLoader()
+		this.#loaders.push({
+			extensions: ['model.svg'],
+			action: (resource) => {
+				const sourceData = resource.data ?? {}
+				sourceData.scale ??= 0.2
+				sourceData.drawFillShapes ??= true
+				sourceData.fillShapesWireframe ??= false
+				sourceData.drawStrokes ??= true
+				sourceData.strokesWireframe ??= false
 
-          this._fileLoadEnd(resource, group)
-        })
-      },
-    })
+				svgLoader.load(resource.source, (data) => {
+					const group = new Object3D()
 
-    // EXR
-    const exrLoader = new EXRLoader()
-    this._loaders.push({
-      extensions: ['exr'],
-      action: (resource) => {
-        exrLoader.load(resource.source, (data) => {
-          this._fileLoadEnd(resource, data)
-        })
-      },
-    })
+					let renderOrder = 0
 
-    // Draco
-    const dracoLoader = new DRACOLoader()
-    dracoLoader.setDecoderPath('draco/')
-    dracoLoader.setDecoderConfig({ type: 'js' })
+					for (const path of data.paths) {
+						const fillColor = path.userData?.style?.fill
 
-    this._loaders.push({
-      extensions: ['drc'],
-      action: (resource) => {
-        dracoLoader.load(resource.source, (data) => {
-          this._fileLoadEnd(resource, data)
+						if (
+							sourceData.drawFillShapes &&
+							fillColor !== undefined &&
+							fillColor !== 'none'
+						) {
+							const material = new MeshBasicMaterial({
+								color: new Color().setStyle(fillColor),
+								opacity: path.userData?.style?.fillOpacity ?? 1,
+								transparent: true,
+								side: DoubleSide,
+								depthWrite: false,
+								wireframe: sourceData.fillShapesWireframe,
+							})
 
-          // @ts-ignore // @TODO: Fix this
-          DRACOLoader.releaseDecoderModule()
-        })
-      },
-    })
+							const shapes = SVGLoader.createShapes(path)
 
-    // GLTF
-    const gltfLoader = new GLTFLoader()
-    gltfLoader.setDRACOLoader(dracoLoader)
+							for (const shape of shapes) {
+								const geometry = new ShapeGeometry(shape)
+								const mesh = new Mesh(geometry, material)
+								mesh.renderOrder = renderOrder++
 
-    this._loaders.push({
-      extensions: ['glb', 'gltf'],
-      action: (resource) => {
-        gltfLoader.load(resource.source, (data) => {
-          this._fileLoadEnd(resource, data)
-        })
-      },
-    })
+								group.add(mesh)
+							}
+						}
 
-    // FBX
-    const fbxLoader = new FBXLoader()
+						const strokeColor = path.userData?.style?.stroke
 
-    this._loaders.push({
-      extensions: ['fbx'],
-      action: (resource) => {
-        fbxLoader.load(resource.source, (data) => {
-          this._fileLoadEnd(resource, data)
-        })
-      },
-    })
+						if (
+							sourceData.drawStrokes &&
+							strokeColor !== undefined &&
+							strokeColor !== 'none'
+						) {
+							const material = new MeshBasicMaterial({
+								color: new Color().setStyle(strokeColor),
+								opacity: path.userData?.style?.strokeOpacity ?? 1,
+								transparent: true,
+								side: DoubleSide,
+								depthWrite: false,
+								wireframe: sourceData.strokesWireframe,
+							})
 
-    // RGBE | HDR
-    const rgbeLoader = new RGBELoader()
+							for (const subPath of path.subPaths) {
+								const geometry = SVGLoader.pointsToStroke(
+									subPath.getPoints(),
+									path.userData?.style
+								)
 
-    this._loaders.push({
-      extensions: ['hdr'],
-      action: (resource) => {
-        rgbeLoader.load(resource.source, (data) => {
-          this._fileLoadEnd(resource, data)
-        })
-      },
-    })
+								if (geometry) {
+									const mesh = new Mesh(geometry, material)
+									mesh.renderOrder = renderOrder++
 
-    // Video
-    this._loaders.push({
-      extensions: ['mp4'],
-      action: (resource) => {
-        const video = document.createElement('video')
-        video.src = resource.source
+									group.add(mesh)
+								}
+							}
+						}
+					}
 
-        // Subtitles
-        resource.subtitles && this._setSubtitles(video, resource.subtitles)
+					// Get the size of the group
+					const size = get3DSize(group).clone().multiplyScalar(0.5)
+					group.traverse((c) => {
+						if (c instanceof Mesh) {
+							c.position.x -= size.x
+							c.position.y -= size.y
+							c.position.z -= size.z
+						}
+					})
+					group.scale.y *= -1
 
-        this.$bus?.on('audio:mute', () => {
-          video.muted = true
-        })
+					this.#fileLoadEnd(resource, group)
+				})
+			},
+		})
 
-        this.$bus?.on('audio:unmute', () => {
-          video.muted = false
-        })
+		// EXR
+		const exrLoader = new EXRLoader()
+		this.#loaders.push({
+			extensions: ['exr'],
+			action: (resource) => {
+				exrLoader.load(resource.source, (data) => {
+					this.#fileLoadEnd(resource, data)
+				})
+			},
+		})
 
-        video.load()
+		// Draco
+		const dracoLoader = new DRACOLoader()
+		dracoLoader.setDecoderPath('draco/')
+		dracoLoader.setDecoderConfig({ type: 'js' })
 
-        video.addEventListener('loadeddata', () => {
-          this._fileLoadEnd(resource, video)
-        })
-      },
-    })
+		this.#loaders.push({
+			extensions: ['drc'],
+			action: (resource) => {
+				dracoLoader.load(resource.source, (data) => {
+					this.#fileLoadEnd(resource, data)
 
-    // Audio
-    this._loaders.push({
-      extensions: ['m4a', 'mp3', 'ogg', 'wav'],
-      action: (resource) => {
-        // Audio
-        const audio = document.createElement('audio')
-        audio.preload = 'auto'
-        audio.src = resource.source
+					// @ts-ignore // @TODO: Fix this
+					DRACOLoader.releaseDecoderModule()
+				})
+			},
+		})
 
-        // Subtitles
-        resource.subtitles && this._setSubtitles(audio, resource.subtitles)
+		// GLTF
+		const gltfLoader = new GLTFLoader()
+		gltfLoader.setDRACOLoader(dracoLoader)
 
-        audio.load()
-        audio.addEventListener('loadeddata', () => {
-          this._fileLoadEnd(resource, audio)
-        })
-      },
-    })
+		this.#loaders.push({
+			extensions: ['glb', 'gltf'],
+			action: (resource) => {
+				gltfLoader.load(resource.source, (data) => {
+					this.#fileLoadEnd(resource, data)
+				})
+			},
+		})
 
-    // Lottie
-    const lottieLoader = new LottieLoader()
+		// FBX
+		const fbxLoader = new FBXLoader()
 
-    this._loaders.push({
-      extensions: ['lottie.json'],
-      action: (resource) => {
-        lottieLoader.load(resource.source, (animation) => {
-          this._fileLoadEnd(resource, animation)
-        })
-      },
-    })
+		this.#loaders.push({
+			extensions: ['fbx'],
+			action: (resource) => {
+				fbxLoader.load(resource.source, (data) => {
+					this.#fileLoadEnd(resource, data)
+				})
+			},
+		})
 
-    // Font
-    const fontLoader = new FontLoader()
+		// RGBE | HDR
+		const rgbeLoader = new RGBELoader()
 
-    this._loaders.push({
-      extensions: ['font.json'],
-      action: (ressource) => {
-        fontLoader.load(ressource.source, (font) => {
-          this._fileLoadEnd(ressource, font)
-        })
-      },
-    })
-  }
+		this.#loaders.push({
+			extensions: ['hdr'],
+			action: (resource) => {
+				rgbeLoader.load(resource.source, (data) => {
+					this.#fileLoadEnd(resource, data)
+				})
+			},
+		})
 
-  /**
-   * Get extension from ressource
-   * @param {*} source source to check
-   * @returns extension for loader uses
-   */
-  private _getExtension(source: TResourceItem['source']): TExtension | void {
-    const ext = source.match(/\.([a-z0-9]+)$/i)?.[1] as TExtension | void
-    if (!ext) return
+		// Video
+		this.#loaders.push({
+			extensions: ['mp4'],
+			action: (resource) => {
+				const video = document.createElement('video')
+				video.src = resource.source
 
-    if (ext === 'svg') {
-      if (source.includes('model.svg')) {
-        return 'model.svg'
-      }
-    }
+				// Subtitles
+				resource.subtitles && this.#setSubtitles(video, resource.subtitles)
 
-    if (ext === 'json') {
-      if (source.includes('lottie.json')) {
-        return 'lottie.json'
-      } else if (source.includes('font.json')) {
-        return 'font.json'
-      }
-    }
+				this.$bus?.on('audio:mute', () => {
+					video.muted = true
+				})
 
-    return ext
-  }
+				this.$bus?.on('audio:unmute', () => {
+					video.muted = false
+				})
 
-  /**
-   * Check the resource type
-   * @param file File to check
-   * @returns Resource data
-   */
-  private _imageToTexture(file: TResourceFile): TResourceData {
-    // Convert to texture
-    if (!(file.data instanceof Texture)) {
-      file.data = new Texture(file.data as HTMLImageElement)
-      file.data.needsUpdate = true
-    }
+				video.load()
 
-    return file.data
-  }
+				video.addEventListener('loadeddata', () => {
+					this.#fileLoadEnd(resource, video)
+				})
+			},
+		})
 
-  /**
-   * Handle cue change
-   * @param evt event
-   */
-  private _handleCueChange(evt: Event): void {
-    const cues = (evt.currentTarget as HTMLTrackElement)?.track?.activeCues
-    this._store.cues = cues
-  }
+		// Audio
+		this.#loaders.push({
+			extensions: ['m4a', 'mp3', 'ogg', 'wav'],
+			action: (resource) => {
+				// Audio
+				const audio = document.createElement('audio')
+				audio.preload = 'auto'
+				audio.src = resource.source
 
-  /**
-   * Set subtitles for an audio or video
-   * @param {*} element Audio / Video element
-   * @param {*} subtitles Subtitles object
-   */
-  private _setSubtitles(
-    element: HTMLVideoElement | HTMLAudioElement,
-    subtitles: Record<string, string>
-  ): void {
-    // Init tracks of the elementx
-    Object.keys(subtitles).forEach((key) => {
-      const trackEl = document.createElement('track')
-      trackEl.src = subtitles[key]
-      trackEl.kind = 'subtitles'
-      trackEl.label = Loader._i18n.t('LANG.' + key.toUpperCase() + '.LABEL')
-      trackEl.srclang = key
-      trackEl.default = Loader._i18n.locale.value == key
+				// Subtitles
+				resource.subtitles && this.#setSubtitles(audio, resource.subtitles)
 
-      trackEl.addEventListener('cuechange', this._handleCueChange)
-      element.appendChild(trackEl)
+				audio.load()
+				audio.addEventListener('loadeddata', () => {
+					this.#fileLoadEnd(resource, audio)
+				})
+			},
+		})
 
-      trackEl.track.mode = 'hidden'
-    })
+		// Lottie
+		const lottieLoader = new LottieLoader()
 
-    // Update the track on locale change
-    this._onLangChange(element, (Loader._i18n.locale.value || 'fr') as TLocale)
-    this.$bus?.on('lang:change', (locale: TLocale) =>
-      this._onLangChange(element, locale)
-    )
-  }
+		this.#loaders.push({
+			extensions: ['lottie.json'],
+			action: (resource) => {
+				lottieLoader.load(resource.source, (animation) => {
+					this.#fileLoadEnd(resource, animation)
+				})
+			},
+		})
 
-  /**
-   * On lang change, set the language of the subtitles
-   * @param {*} element Audio / Video element
-   * @param {*} locale New locale to use
-   */
-  private _onLangChange(
-    element: HTMLVideoElement | HTMLAudioElement,
-    locale: TLocale
-  ): void {
-    // Disable all text tracks that are currently active
-    Object.values(element.textTracks)
-      .filter((x) => x.mode !== 'disabled')
-      .forEach((x) => {
-        x.mode = 'disabled'
-      })
+		// Font
+		const fontLoader = new FontLoader()
 
-    // Enable the text track for a specific language
-    Object.values(element.textTracks).filter(
-      (x) => x.language == locale
-    )[0].mode = 'hidden'
-  }
+		this.#loaders.push({
+			extensions: ['font.json'],
+			action: (ressource) => {
+				fontLoader.load(ressource.source, (font) => {
+					this.#fileLoadEnd(ressource, font)
+				})
+			},
+		})
+	}
 
-  /**
-   * File load end
-   */
-  private _fileLoadEnd(
-    resource: TResourceFile['resource'],
-    data: TResourceData
-  ): void {
-    this.loaded++
-    this.items[resource.name] = data
+	/**
+	 * Get extension from ressource
+	 * @param {*} source source to check
+	 * @returns extension for loader uses
+	 */
+	#getExtension(source: TResourceItem['source']): TExtension | void {
+		const ext = source.match(/\.([a-z0-9]+)$/i)?.[1] as TExtension | void
+		if (!ext) return
 
-    this.trigger('loadingFileEnd', { resource, data })
+		if (ext === 'svg') {
+			if (source.includes('model.svg')) {
+				return 'model.svg'
+			}
+		}
 
-    if (this.loaded === this.total) {
-      this.trigger('loadingGroupEnd')
-    }
-  }
+		if (ext === 'json') {
+			if (source.includes('lottie.json')) {
+				return 'lottie.json'
+			} else if (source.includes('font.json')) {
+				return 'font.json'
+			}
+		}
+
+		return ext
+	}
+
+	/**
+	 * Check the resource type
+	 * @param file File to check
+	 * @returns Resource data
+	 */
+	#imageToTexture(file: TResourceFile): TResourceData {
+		// Convert to texture
+		if (!(file.data instanceof Texture)) {
+			file.data = new Texture(file.data as HTMLImageElement)
+			file.data.needsUpdate = true
+		}
+
+		return file.data
+	}
+
+	/**
+	 * Handle cue change
+	 * @param evt event
+	 */
+	#handleCueChange(evt: Event): void {
+		const cues = (evt.currentTarget as HTMLTrackElement)?.track?.activeCues
+		this.#store.cues = cues
+	}
+
+	/**
+	 * Set subtitles for an audio or video
+	 * @param {*} element Audio / Video element
+	 * @param {*} subtitles Subtitles object
+	 */
+	#setSubtitles(
+		element: HTMLVideoElement | HTMLAudioElement,
+		subtitles: Record<string, string>
+	): void {
+		// Init tracks of the elementx
+		Object.keys(subtitles).forEach((key) => {
+			const trackEl = document.createElement('track')
+			trackEl.src = subtitles[key]
+			trackEl.kind = 'subtitles'
+			trackEl.label = Loader.#i18n.t('LANG.' + key.toUpperCase() + '.LABEL')
+			trackEl.srclang = key
+			trackEl.default = Loader.#i18n.locale.value == key
+
+			trackEl.addEventListener('cuechange', this.#handleCueChange)
+			element.appendChild(trackEl)
+
+			trackEl.track.mode = 'hidden'
+		})
+
+		// Update the track on locale change
+		this.#onLangChange(element, (Loader.#i18n.locale.value || 'fr') as TLocale)
+		this.$bus?.on('lang:change', (locale: TLocale) =>
+			this.#onLangChange(element, locale)
+		)
+	}
+
+	/**
+	 * On lang change, set the language of the subtitles
+	 * @param {*} element Audio / Video element
+	 * @param {*} locale New locale to use
+	 */
+	#onLangChange(
+		element: HTMLVideoElement | HTMLAudioElement,
+		locale: TLocale
+	): void {
+		// Disable all text tracks that are currently active
+		Object.values(element.textTracks)
+			.filter((x) => x.mode !== 'disabled')
+			.forEach((x) => {
+				x.mode = 'disabled'
+			})
+
+		// Enable the text track for a specific language
+		Object.values(element.textTracks).filter(
+			(x) => x.language == locale
+		)[0].mode = 'hidden'
+	}
+
+	/**
+	 * File load end
+	 */
+	#fileLoadEnd(resource: TResourceFile['resource'], data: TResourceData): void {
+		this.loaded++
+		this.items[resource.name] = data
+
+		this.trigger('loadingFileEnd', { resource, data })
+
+		if (this.loaded === this.total) {
+			this.trigger('loadingGroupEnd')
+		}
+	}
 }

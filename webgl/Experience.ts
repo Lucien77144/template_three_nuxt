@@ -7,7 +7,6 @@ import { Raycaster } from 'three'
 import AudioManager from './Core/AudioManager'
 import Store from './Core/Store'
 import KeysManager from '~/utils/KeysManager'
-import ScrollManager, { type TScrollEvent } from '~/utils/ScrollManager'
 import Viewport from '~/utils/Viewport'
 import Debug from './Core/Debug'
 
@@ -20,7 +19,7 @@ type TOptions = {
 
 export default class Experience {
 	// Static
-	private static _instance?: Experience
+	static instance?: Experience
 
 	// Public
 	public time!: Time
@@ -29,33 +28,34 @@ export default class Experience {
 	public raycaster!: Raycaster
 	public sceneManager!: SceneManager
 	public keysManager!: KeysManager
-	public scrollManager!: ScrollManager
 	public audioManager!: AudioManager
 	public cursorManager!: CursorManager
 	public viewport!: Viewport
 	public debug?: Debug
 	public defaultScene?: string
 	public debugContainer?: HTMLElement
-	public canvas?: HTMLCanvasElement
+	public canvas!: HTMLCanvasElement
 	public name!: string
 	public $bus!: any
 	public store!: Store
 
 	// Private
-	private _handleResize!: () => void
-	private _handleStart!: () => void
-	private _handleUpdate!: () => void
-	private _handleScroll!: (event: TScrollEvent) => void
+	#handleResize!: () => void
+	#handleStart!: () => void
+	#handleUpdate!: () => void
 
 	/**
 	 * Constructor
 	 */
 	constructor({ canvas, defaultScene, debug, name }: TOptions = {}) {
 		// Singleton
-		if (Experience._instance) {
-			return Experience._instance
+		if (Experience.instance) {
+			return Experience.instance
 		}
-		Experience._instance = this
+		Experience.instance = this
+
+		// Check if canvas
+		if (!canvas) throw Error('No canvas provided')
 
 		// Public
 		this.name = name || 'Experience'
@@ -66,14 +66,13 @@ export default class Experience {
 		this.store = new Store()
 
 		// Private
-		this._handleResize = this._resize.bind(this)
-		this._handleStart = this.start.bind(this)
-		this._handleUpdate = this._update.bind(this)
-		this._handleScroll = this._scroll.bind(this)
+		this.#handleResize = this.#resize.bind(this)
+		this.#handleStart = this.start.bind(this)
+		this.#handleUpdate = this.#update.bind(this)
 		this.$bus = useNuxtApp().$bus
 
 		// Init
-		this._init()
+		this.#init()
 	}
 
 	/**
@@ -94,29 +93,23 @@ export default class Experience {
 	 * Start the experience
 	 */
 	public start() {
-		this.sceneManager
-			.init(this.viewport?.debug ? this.defaultScene : undefined)
-			.then(() => {
-				this.active = true
+		this.sceneManager.init(this.viewport?.debug ? this.defaultScene : undefined)
+		this.active = true
 
-				// Events
-				this.time.on('tick', this._handleUpdate)
-				this.$bus.emit('experience:ready')
-			})
+		// Events
+		this.time.on('tick', this.#handleUpdate)
+		this.$bus.emit('experience:ready')
 	}
 
 	/**
 	 * Dispose the experience
 	 */
 	public dispose() {
-		this.$bus.off('ready', this._handleStart)
-		this.$bus.off('resize', this._handleResize)
-
+		this.$bus.off('ready', this.#handleStart)
+		this.$bus.off('resize', this.#handleResize)
 		this.time.off('tick')
-		this.time.stop()
+		this.time.dispose()
 
-		this.viewport?.dispose()
-		this.scrollManager?.dispose()
 		this.cursorManager?.dispose()
 		this.keysManager?.dispose()
 		this.renderer.dispose()
@@ -126,13 +119,13 @@ export default class Experience {
 		this.debug?.dispose()
 		this.store?.dispose()
 
-		delete Experience._instance
+		delete Experience.instance
 	}
 
 	/**
 	 * Init the experience
 	 */
-	private _init() {
+	#init() {
 		// Set viewport and time
 		this.viewport = new Viewport()
 		this.time = new Time()
@@ -143,43 +136,30 @@ export default class Experience {
 		}
 
 		// Set elements
-		this.scrollManager = new ScrollManager({
-			limit: { min: 0, max: 100 },
-			decimal: 1000,
-		})
+		this.resources = new Resources()
 		this.renderer = new Renderer()
 		this.keysManager = new KeysManager()
 		this.sceneManager = new SceneManager()
 		this.raycaster = new Raycaster()
-		this.resources = new Resources()
 		this.audioManager = new AudioManager()
 
 		// Events
-		this.resources.on('ready', this._handleStart)
-		this.viewport.on('resize', this._handleResize)
-		this.scrollManager.on('scroll', this._handleScroll)
+		this.resources.on('ready', this.#handleStart)
+		this.viewport.on('resize', this.#handleResize)
 	}
 
 	/**
 	 * Resize the experience
 	 */
-	private _resize() {
+	#resize() {
 		this.renderer.resize()
 		this.sceneManager.resize()
 	}
 
 	/**
-	 * On scroll
-	 * @param {TScrollEvent} event
-	 */
-	private _scroll(event: TScrollEvent) {
-		this.store.scroll = event.current
-	}
-
-	/**
 	 * Update the experience
 	 */
-	private _update() {
+	#update() {
 		this.renderer.update()
 		this.sceneManager.update()
 		this.debug?.update()

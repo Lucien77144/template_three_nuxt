@@ -1,37 +1,25 @@
-import { MathUtils } from 'three'
 import Experience from '../Experience'
-import gsap from 'gsap'
-import scenes from '~/const/scenes.const'
-import type {
-	TSceneInfos,
-	TSceneNavigation,
-	TScenes,
-} from '~/models/utils/SceneManager.model'
-import type Renderer from '../Modules/Renderer/Renderer'
-import runMethod from '~/utils/functions/runMethod'
+import type { TSceneInfos, TScenes } from '~/models/utils/SceneManager.model'
 import type ExtendableScene from '../Modules/Extendables/ExtendableScene'
-import type { BindingApi, FolderApi } from '@tweakpane/core'
+import type { BindingApi } from '@tweakpane/core'
+import Scenes from '../Scenes'
 
-const SCENES = scenes as TScenes
+const SCENES = Scenes as TScenes
 
 export default class SceneManager {
 	// Public
 	public scenes: TScenes
 	public scale: number
 	public start: number
-	public active?: ExtendableScene
-	public next?: ExtendableScene
+	public renderList: ExtendableScene[]
 
 	// Private
-	private _experience: Experience
-	private _renderer: Experience['renderer']
-	private _store: Experience['store']
-	private _scrollManager: Experience['scrollManager']
-	private _debug: Experience['debug']
-	private _debugNavigation?: FolderApi
-	private _debugScene?: BindingApi
-	private _renderMesh?: Renderer['renderMesh']
-	private _activeSceneName: { value: string }
+	#experience: Experience
+	#store: Experience['store']
+	#debug: Experience['debug']
+	#debugScene?: BindingApi
+	#active?: ExtendableScene
+	#next?: ExtendableScene
 	private $bus: Experience['$bus']
 
 	/**
@@ -39,306 +27,236 @@ export default class SceneManager {
 	 */
 	constructor() {
 		// Public
+		this.renderList = []
 		this.scenes = SCENES
 		this.scale = 0
 		this.start = 0
 
 		// Private
-		this._experience = new Experience()
-		this._renderer = this._experience.renderer
-		this._store = this._experience.store
-		this._scrollManager = this._experience.scrollManager
-		this._debug = this._experience.debug
-		this._activeSceneName = { value: this.scenes.default.name }
-		this.$bus = this._experience.$bus
+		this.#experience = new Experience()
+		this.#store = this.#experience.store
+		this.#debug = this.#experience.debug
+		this.$bus = this.#experience.$bus
 	}
 
 	/**
-	 * Set scene in storage and navigation stores
-	 * @param {TSceneInfos} scene Scene infos
+	 * Get active scene
 	 */
-	public setScene(scene: TSceneInfos): void {
-		if (!this._debug || !this._debugScene) return
-		this._activeSceneName.value = scene.name
+	public get active() {
+		return this.#active
 	}
 
 	/**
-	 * Set scale
-	 * @param {number} scale
+	 * Set active scene
 	 */
-	public setScale(scale: number): void {
-		this.scale = scale
+	public set active(scene: ExtendableScene | undefined) {
+		// Remove the previous scene from the render list
+		if (this.#active) {
+			this.#removeFromRenderList(this.#active)
+		}
+
+		// Set the active scene
+		this.#active = scene
+		this.#store.scene = scene?.name
+
+		// Add the active scene to the render list
+		if (scene) {
+			this.#addToRenderList(scene)
+		}
 	}
 
 	/**
-	 * Set start
-	 * @param {number} start
+	 * Get next scene
 	 */
-	public setStart(start: number): void {
-		this.start = start
+	public get next() {
+		return this.#next
 	}
 
 	/**
-	 * Update scroll
-	 * @param {number} val Scroll value, from 0 to 100
+	 * Set next scene
 	 */
-	public navigate({ scroll, navigation }: TSceneNavigation): void {
-		scroll && this._scrollManager?.to(scroll)
-		navigation && this._setNavigation(navigation)
+	public set next(scene: ExtendableScene | undefined) {
+		// Set the next scene
+		this.#next = scene
 
-		navigation?.scene && this.setScene(navigation.scene)
-		navigation?.scale && this.setScale(navigation.scale)
-		navigation?.start && this.setStart(navigation.start)
+		// Add the next scene to the render list
+		if (this.#next) {
+			this.#addToRenderList(this.#next)
+		}
 	}
 
 	/**
 	 * Switch scene
 	 * @param {TSceneInfos} nextInfos Destination scene
+	 * @param {boolean} instant If true, the scene will be switched instantly
 	 */
-	public switch(nextInfos: TSceneInfos): void {
-		if (this.next) return
-		if (this._debug && this._debugNavigation) {
-			this._debugNavigation.disabled = true // Disable the debug folder during the transition
+	public switch({ Scene }: TSceneInfos, instant: boolean = false): void {
+		if (this.next && !instant) return
+		if (this.#debug && this.#debugScene) {
+			this.#debugScene.disabled = true // Disable the debug folder during the transition
 		}
 
-		// Disable scroll
-		this._scrollManager?.setDisable(true)
+		// Init & load the next scene
+		const next = new Scene()
+		next.trigger('load')
 
-		// Init next scene
-		const previous = this.active?.name
-		this.next = new nextInfos.Scene()
+		// Set the next scene
+		this.next = next
 
 		// Switch function start on previous scene
-		runMethod(this.active, 'OnDisposeStart')
+		this.active?.trigger('disposestart')
 
-		// Update the store (and localstorage) with the new scene :
-		this.navigate({
-			navigation: {
-				scene: nextInfos,
-				start: this.start,
-				scale: this.scale,
-			},
-		})
-
-		// Add render mesh if unset :
-		const transition = nextInfos.transition
-		this._renderMesh ??= this._renderer?.renderMesh
-		if (!this._renderMesh) return
-
-		// Get current scroll value
-		const scroll = this._scrollManager?.current ?? 0
-
-		// Smooth transition with gsap
-		const nextIndex = this._findIndexByName(nextInfos.name)
-		const previousIndex = this._findIndexByName(previous)
-		const diff = nextIndex - previousIndex
-		this._renderMesh.material.uniforms.uDirection.value = Math.sign(diff)
-
-		const isHalf = { value: false }
-		const duration = transition?.duration ? transition.duration / 1000 : 1000
-		gsap.to(this._renderMesh?.material.uniforms.uTransition, {
-			value: 1,
-			duration,
-			ease: 'power1.inOut',
-			onUpdate: () => {
-				// Progression of the transition :
-				const progress = this._renderMesh?.material.uniforms.uTransition.value
-
-				if (!isHalf.value && progress >= 0.5) {
-					isHalf.value = true
-					this.$bus?.emit('cssRender:toggle', nextInfos.name)
-				}
-
-				// Transition of values of progressBar
-				this.navigate({
-					navigation: {
-						start: MathUtils.lerp(
-							this.start,
-							nextInfos.nav?.start ?? 0,
-							progress
-						),
-						scale: MathUtils.lerp(
-							this.scale,
-							nextInfos.nav?.scale ?? 0,
-							progress
-						),
-					},
-					scroll: scroll * (1 - progress),
-				})
-			},
-			onComplete: () => this._onSwitchComplete(nextInfos),
-		})
+		if (this.active?.transition && !instant) {
+			const transition = this.active?.transition.start()
+			transition.then(() => this.#onSwitchComplete())
+		} else {
+			this.#onSwitchComplete()
+		}
 	}
 
 	/**
 	 * Init scene
-	 * @param {*} baseScene If set, initial scene name to load
+	 * @param {*} name If set, initial scene name to load
 	 */
-	public init(baseScene: string = this.scenes.default.name): Promise<void> {
-		// Debug
-		if (this._debug && baseScene) this._setDebug()
-		const name = this._activeSceneName.value || baseScene
+	public init(name: string = this.scenes.default.name): void {
+		// Init debug
+		if (this.#debug && name) {
+			this.#setDebug(name)
+		}
 
-		// Get the scene from the store or the default one
-		const scene = this._getSceneFromList(name)
+		// Get the scene and init it
+		const { Scene } = this.#getSceneFromList(name)
+		const active = new Scene()
 
-		// Set navigation
-		this.navigate({
-			navigation: {
-				scene,
-				start: scene.nav?.start ?? 0,
-				scale: scene.nav?.scale ?? 1,
-			},
-			scroll: 0,
-		})
+		// Trigger load and ready events
+		active.trigger('load')
+		active.trigger('ready')
 
-		// Init active scene
-		this.active = new scene.Scene()
-
-		// Switch complete function on the new scene
-		runMethod(this.active, 'OnInitComplete')
+		// Set the active scene
+		this.active = active
 
 		// Start navigation
 		this.$bus?.on('scene:switch', (scene: TSceneInfos) => this.switch(scene))
-		this.$bus?.emit('cssRender:toggle', scene.name)
-
-		// Wait the scene to be built before starting the experience
-		return new Promise((resolve) => {
-			const scene = this.active?.scene
-			const camera = this.active?.camera.instance
-			const renderer = this._renderer?.instance
-
-			if (!scene || !renderer || !camera) {
-				return console.error('Scene, camera or renderer not found', {
-					scene,
-					camera,
-					renderer,
-				})
-			}
-
-			scene.onAfterRender = () => {
-				scene.onAfterRender = scene.onAfterRender
-				resolve()
-			}
-
-			renderer.render(scene, camera)
-			renderer.clear()
-		})
 	}
 
 	/**
 	 * Update
 	 */
 	public update(): void {
-		runMethod(this.active, 'OnUpdate')
-		runMethod(this.next, 'OnUpdate')
+		this.renderList.forEach((scene) => scene.trigger('update'))
 	}
 
 	/**
 	 * Resize
 	 */
 	public resize(): void {
-		runMethod(this.active, 'OnResize')
-		runMethod(this.next, 'OnResize')
+		this.renderList.forEach((scene) => scene.trigger('resize'))
 	}
 
 	/**
 	 * Dispose
 	 */
 	public dispose(): void {
-		runMethod(this.active, 'OnDispose')
-		runMethod(this.next, 'OnDispose')
+		this.renderList.forEach((scene) => scene.trigger('dispose'))
+	}
+
+	/**
+	 * Remove elements from render list
+	 * @param list Elements to remove
+	 */
+	#removeFromRenderList(scene: ExtendableScene): void {
+		const removeList = [
+			scene.id,
+			...Object.values(scene.allScenes).map((s) => s.id),
+		]
+
+		this.renderList = this.renderList.filter((s) => !removeList.includes(s.id))
+		scene.isActive = false
+	}
+
+	/**
+	 * Add elements to render list
+	 * @param list Elements to add
+	 */
+	#addToRenderList(scene: ExtendableScene): void {
+		if (!this.renderList.find((s) => s.id === scene.id)) {
+			this.renderList.push(...Object.values(scene.allScenes), scene)
+			scene.isActive = true
+		}
 	}
 
 	/**
 	 * On switch complete
 	 * @param infos Scene infos
 	 */
-	private _onSwitchComplete(infos: TSceneInfos): void {
-		// Reset navigation values
-		this.navigate({
-			navigation: {
-				start: infos.nav?.start ?? 0,
-				scale: infos.nav?.scale ?? 1,
-			},
-			scroll: 0,
-		})
-
-		// Reset transition uniform value :
-		if (this._renderMesh) {
-			this._renderMesh.material.uniforms.uTransition.value = 0
+	#onSwitchComplete(): void {
+		// Enable debug scene
+		if (this.#debug && this.#debugScene && this.#debugScene) {
+			this.#debugScene.disabled = false
 		}
 
-		// Reset params :
-		if (this._debug && this._debugNavigation && this._debugScene) {
-			this._debugNavigation.disabled = false
-		}
-		runMethod(this.active, 'OnDispose')
+		// Get the previous scene
+		const previousScene = this.active
+
+		// Switch to next scene
 		this.active = this.next
-		delete this.next
+		this.next = undefined
+
+		// Dispose previous scene
+		previousScene?.trigger('dispose')
 
 		// Switch complete function on the new scene
-		this._scrollManager?.setDisable(false)
-		runMethod(this.active, 'OnInitComplete')
-	}
-
-	/**
-	 * Set navigation in the store
-	 * @param navigation
-	 */
-	private _setNavigation(navigation: Experience['store']['navigation']): void {
-		this._store.navigation = navigation
+		this.active?.trigger('ready')
 	}
 
 	/**
 	 * Set debug
 	 */
-	private _setDebug(): void {
-		if (!this._debug) return
-
-		this._debugNavigation = this._debug.panel.addFolder({
-			expanded: false,
-			title: 'Navigation',
+	#setDebug(defaultScene: string): void {
+		// Separator
+		this.#debug!.panel.addBlade({
+			view: 'separator',
 		})
 
 		// Debug scene
-		this._debugScene = this._debugNavigation.addBinding(
-			this._activeSceneName,
-			'value',
-			{
-				view: 'list',
-				label: 'scene',
-				options: this.scenes.list.map((i) => ({
-					text: i.Scene.name,
-					value: i.Scene.name,
-				})),
-			}
-		)
+		const scene = {
+			value: defaultScene,
+			onLoad: () => {
+				// Switch to default scene
+				if (scene.value !== defaultScene) {
+					const infos = this.#getSceneFromList(scene.value)
+					this.switch(infos, true)
+				}
 
-		// Persist the folder and enable it
-		this._debugNavigation.disabled = false
+				// Add switch event on change scene
+				this.#debugScene!.on('change', (evt) => {
+					const value = evt.value as string
+					const infos = this.#getSceneFromList(value)
 
-		// Add switch event on change scene
-		window.requestAnimationFrame(() =>
-			this._debugScene?.on('change', (evt) =>
-				this.switch(this._getSceneFromList(evt.value as string))
-			)
-		)
-	}
+					return this.switch(infos)
+				})
+			},
+		}
+		this.#debugScene = this.#debug!.panel.addBinding(scene, 'value', {
+			view: 'list',
+			label: 'Scene',
+			options: this.scenes.list.map((i) => ({
+				text: i.Scene.name,
+				value: i.Scene.name,
+			})),
+		})
 
-	/**
-	 * Find index by name
-	 * @param {TSceneInfos['name']} name Scene name
-	 */
-	private _findIndexByName(name?: string): number {
-		return scenes.list.findIndex((s) => s.name === name)
+		// Separator
+		this.#debug!.panel.addBlade({
+			view: 'separator',
+		})
 	}
 
 	/**
 	 * Get scene from list
 	 * @param {*} name Scene name
 	 */
-	private _getSceneFromList(name?: string): TSceneInfos {
+	#getSceneFromList(name?: string): TSceneInfos {
 		return this.scenes.list.find((s) => s.name === name) || this.scenes.default
 	}
 }

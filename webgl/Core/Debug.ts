@@ -3,9 +3,17 @@ import * as TweakpanePluginMedia from 'tweakpane-plugin-media'
 // @ts-ignore // @TODO: Fix the ts error on import
 import * as TweakpaneFileImportPlugin from 'tweakpane-plugin-file-import'
 import Experience from '../Experience'
-import type { BladeState, FolderController, PluginPool } from '@tweakpane/core'
+import type {
+	BladeApi,
+	BladeState,
+	FolderApi,
+	FolderController,
+	PluginPool,
+} from '@tweakpane/core'
 import Stats from './Stats'
 import { Pane } from 'tweakpane'
+import { defined } from '~/utils/functions/defined'
+import { copyObject } from '~/utils/functions/copyObject'
 
 type TMonitoringValue = {
 	name: string
@@ -47,126 +55,257 @@ export default class Debug {
 	public stats!: Stats
 
 	// Private
-	private _experience: Experience
-	private _viewport: Experience['viewport']
-	private _statsValues?: TStatsValues
-	private _monitoring!: HTMLElement
-	private _self: any
+	#experience: Experience
+	#viewport: Experience['viewport']
+	#statsValues?: TStatsValues
+	#monitoring!: HTMLElement
+	#self: any
 
 	constructor() {
 		// Private
-		this._experience = new Experience()
-		this._viewport = this._experience.viewport
+		this.#experience = new Experience()
+		this.#viewport = this.#experience.viewport
 
 		// Public
-		this._setPanel()
-		this._saveFolderState()
-		this._setPlugins()
-		this._setHeaderButtons()
-		this._setMoveEvent()
-		this._setResizeEvent()
-		this._setResetButton()
-		this._setDebugManager()
-		this._setStats()
-		this._setMonitoring()
+		this.#setPanel()
+		this.#saveFolderState()
+		this.#setPlugins()
+		this.#setHeaderButtons()
+		this.#setMoveEvent()
+		this.#setResizeEvent()
+		this.#setResetButton()
+		this.#setDebugManager()
+		this.#setStats()
+		this.#setMonitoring()
 	}
 
 	/**
 	 * Get the plugin pool of the pane
 	 */
-	private get _pool(): PluginPool {
-		return this._self.pool_
+	get #pool(): PluginPool {
+		return this.#self.pool_
 	}
 
 	/**
 	 * Get the UI container of the panel
 	 */
-	private get _uiContainer() {
+	get #uiContainer() {
 		return this.panel.element.parentElement as HTMLElement
 	}
 
 	/**
 	 * Get the UI content of the panel
 	 */
-	private get _uiContent() {
-		return this._uiContainer.querySelector('.tp-rotv_c') as HTMLElement
+	get #uiContent() {
+		return this.#uiContainer.querySelector('.tp-rotv_c') as HTMLElement
 	}
 
 	/**
 	 * Get the UI title of the panel
 	 */
-	private get _uiTitle() {
+	get #uiTitle() {
 		return this.panel.element.children[0] as HTMLElement
+	}
+
+	/**
+	 * Get the stack ID
+	 * @param state State of the blade
+	 * @returns Stack ID
+	 */
+	async #getStackID(
+		state: BladeState,
+		el: HTMLElement
+	): Promise<string | undefined> {
+		let res = ''
+		const getParentElement = (el: HTMLElement) => {
+			if (el.classList.contains('tp-rotv_c')) return
+			if (el.classList.contains('tp-fldv')) {
+				const child = el.querySelector('.tp-fldv_b>.tp-fldv_t')
+				if (child) {
+					res += `-${child.textContent}`
+				}
+			}
+
+			if (el.parentElement) {
+				return getParentElement(el.parentElement)
+			}
+		}
+		getParentElement(el)
+
+		const tag = this.#getStateTag(state)
+		async function hashString(input: string): Promise<string> {
+			const encoder = new TextEncoder()
+			const data = encoder.encode(input)
+			const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+			const hashArray = Array.from(new Uint8Array(hashBuffer))
+			const code = hashArray
+				.map((byte) => byte.toString(16).padStart(2, '0'))
+				.join('')
+				.slice(0, 8)
+
+			return `${tag}-${code}`
+		}
+
+		// Check if el is in the dom :
+		const isInDom = document.body.contains(el)
+		if (isInDom) return tag && hashString(res)
+	}
+
+	/**
+	 * Get the state tag
+	 * @param state State of the binding
+	 * @returns State tag
+	 */
+	#getStateTag(state: any): string {
+		let res = state.tag
+		if (!res) {
+			const key = state.binding?.key
+			const name = state.label ?? state.title
+			const filteredName = name.replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '')
+			const parsedName = filteredName
+				?.toLowerCase()
+				.replace(/ /g, '-')
+				?.replace(/[^a-z0-9-_]/g, '')
+				?.replace(/--+/g, '-')
+				?.replace(/^-/, '')
+
+			if (key !== parsedName) {
+				res = `${key ? key + '-' : ''}${parsedName ? parsedName : ''}`
+			} else {
+				res = key && `${key}`
+			}
+		}
+
+		// Ensure the result starts with a letter (CSS requirement)
+		if (res && /^[^a-zA-Z]/.test(res)) {
+			res = 'debug-' + res
+		}
+
+		return res
+	}
+
+	/**
+	 * Remove a folder from the panel
+	 * @param debug Debug folder
+	 */
+	public async remove(debug: FolderApi | BladeApi) {
+		const childs = (debug as FolderApi).children
+		childs?.forEach((child: BladeApi | FolderApi) => this.remove(child))
+
+		this.panel.remove(debug)
+	}
+
+	/**
+	 * Unset the stats panel
+	 */
+	public dispose() {
+		this.panel.dispose()
+		this.stats?.dispose()
+		this.#monitoring?.remove()
+	}
+
+	/**
+	 * Update the debug panel
+	 */
+	public update() {
+		if (this.debugParams.Stats) this.#statsValues?.update()
 	}
 
 	/**
 	 * Set the panel
 	 */
-	private _setPanel() {
-		this.name = `Debug - ${this._experience.name}`
+	#setPanel() {
+		this.name = `Debug - ${this.#experience.name}`
 		this.panel = new Pane({ title: '⚙️ ' + this.name })
-		this._self = this.panel as any
+		this.#self = this.panel as any
 		this.debugParams = DEFAULT_SETTINGS
 
 		// Set the container style
-		this._uiContainer.style.position = 'fixed'
-		this._uiContainer.style.zIndex = '1000'
-		this._uiContainer.style.userSelect = 'none'
+		this.#uiContainer.style.position = 'fixed'
+		this.#uiContainer.style.zIndex = '1000'
+		this.#uiContainer.style.userSelect = 'none'
 
 		// Set the content style
-		this._uiContent.style.maxHeight = '80vh'
-		this._uiContent.style.overflowY = 'auto'
+		this.#uiContent.style.maxHeight = '80vh'
+		this.#uiContent.style.overflowY = 'auto'
 	}
 
 	/**
 	 * Save the folder state
 	 */
-	private _saveFolderState() {
-		const foldersList: Array<`f_${string}`> = []
-		const handleSave = (state: BladeState, key: string) => {
-			return this._handleLocalSave(state, key)
+	#saveFolderState() {
+		const getStackId = async (state: BladeState, element: HTMLElement) => {
+			return await this.#getStackID(state, element)
 		}
-		const getDefaultState = (state: BladeState, key: string) => {
-			return this._handleLocalValue(state, key)
-		}
+		const handleSave = (id: string, state: BladeState) =>
+			this.#handleLocalSave(id, state)
+		const getDefaultState = (id: string) => this.#handleLocalValue(id)
+		const isActive = (id: string) => this.#isActive(id)
 
-		this._pool.createApi = (function (original) {
+		this.#pool.createApi = (function (original) {
 			return function (bc) {
 				if ((bc as FolderController).foldable) {
 					bc = bc as FolderController
 
 					const state = bc.exportState()
-					const key = (state.title as string)?.toLowerCase().replace(/ /g, '-')
-					const id: `f_${string}` = `f_${key}`
+					// disable animation
+					const el = bc.view.element
+					const contentEl = el.querySelector('.tp-fldv_c') as HTMLElement
+					if (contentEl) contentEl.style.transition = 'none'
 
-					if (foldersList.includes(id)) {
-						console.warn(
-							`The tag "${id}" is already used in the session storage`,
-							bc
-						)
-					} else {
-						foldersList.push(id)
+					// Check if the folder has no children
+					const childs = state?.children as any[]
+					if (defined(childs) && !childs.length) {
+						state.hidden = true
 					}
 
-					bc.view.element.addEventListener('click', () => {
-						const state = bc.exportState()
-						handleSave(state, id)
-					})
+					// Used to prevent issues on scene changes
+					window.requestAnimationFrame(() => {
+						// Wait the panel to build element
+						const element = bc.view.element
+						getStackId(state, element).then((id) => {
+							if (!id) return
+							element.id = id
+							element.classList.add(id)
 
-					const defaultState = getDefaultState(state, id)
-					if (defaultState) bc.importState(defaultState)
+							if (isActive(id)) {
+								console.warn(
+									`The debug "${state.title}" is already used in the session storage`,
+									bc
+								)
+							}
+
+							// Default state
+							const defaultState = getDefaultState(id)
+							const defaultChilds = defaultState?.children
+							if (defined(defaultChilds) && !defaultChilds.length) {
+								defaultState.hidden = true
+							}
+							if (defaultState) bc.importState(defaultState)
+
+							window.requestAnimationFrame(() => {
+								if (contentEl) contentEl.style.transition = ''
+							})
+
+							// Click event
+							bc.view.element.addEventListener('click', () => {
+								const state = bc.exportState()
+								handleSave(id, state)
+							})
+						})
+					})
 				}
 
 				// @ts-ignore
 				return original.apply(this, arguments)
 			}
-		})(this._pool.createApi)
+		})(this.#pool.createApi)
 	}
 
 	/**
 	 * Set panel plugins from Tweakpane
 	 */
-	private _setPlugins() {
+	#setPlugins() {
 		this.panel.registerPlugin(TweakpaneEssentialsPlugin)
 		this.panel.registerPlugin(TweakpanePluginMedia)
 		this.panel.registerPlugin(TweakpaneFileImportPlugin)
@@ -175,7 +314,7 @@ export default class Debug {
 	/**
 	 * Set import/export buttons
 	 */
-	private _setHeaderButtons() {
+	#setHeaderButtons() {
 		const blade = this.panel.addBlade({
 			view: 'buttongrid',
 			size: [3, 1],
@@ -185,16 +324,16 @@ export default class Debug {
 		}) as any
 
 		blade.on('click', (event: any) => {
-			if (event.index[0] === 0) return this._handleImport()
-			else if (event.index[0] === 1) return this._handleExport()
-			else if (event.index[0] === 2) return this._handleReset()
+			if (event.index[0] === 0) return this.#handleImport()
+			else if (event.index[0] === 1) return this.#handleExport()
+			else if (event.index[0] === 2) return this.#handleReset()
 		})
 	}
 
 	/**
 	 * Handle import
 	 */
-	private _handleImport() {
+	#handleImport() {
 		const input = document.createElement('input')
 		input.type = 'file'
 		input.accept = '.json'
@@ -214,7 +353,7 @@ export default class Debug {
 	/**
 	 * Handle export
 	 */
-	private _handleExport() {
+	#handleExport() {
 		const data = this.panel.exportState()
 		const element = document.createElement('a')
 		const file = new Blob([JSON.stringify(data)], {
@@ -232,9 +371,9 @@ export default class Debug {
 	/**
 	 * Handle reset
 	 */
-	private _handleReset() {
+	#handleReset() {
 		sessionStorage.removeItem('debugParams')
-		this._uiContent
+		this.#uiContent
 			.querySelectorAll('.tp-reset-button')
 			.forEach((button: any) => button.click())
 	}
@@ -242,15 +381,15 @@ export default class Debug {
 	/**
 	 * Set the move event on the panel
 	 */
-	private _setMoveEvent() {
-		this._uiTitle.childNodes.forEach((child: any) => {
+	#setMoveEvent() {
+		this.#uiTitle.childNodes.forEach((child: any) => {
 			child.style.pointerEvents = 'none'
 		})
 
 		let move = (_: MouseEvent) => {}
 		let hasMoved = true
 		const handleMouseDown = (event: any) => {
-			this._uiTitle.style.cursor = 'grabbing'
+			this.#uiTitle.style.cursor = 'grabbing'
 			const clickTargetX = event.layerX
 			const clickTargetWidth = event.target?.clientWidth
 			const clickTargetY = event.layerY
@@ -258,16 +397,16 @@ export default class Debug {
 			move = ({ clientX, clientY }) => {
 				hasMoved = true
 
-				this._uiContainer.style.right = `${
-					this._viewport.width - clientX - (clickTargetWidth - clickTargetX)
+				this.#uiContainer.style.right = `${
+					this.#viewport.width - clientX - (clickTargetWidth - clickTargetX)
 				}px`
-				this._uiContainer.style.top = `${clientY - clickTargetY}px`
+				this.#uiContainer.style.top = `${clientY - clickTargetY}px`
 			}
 
 			document.addEventListener('mousemove', move)
 		}
 		const handleMouseUp = () => {
-			this._uiTitle.style.cursor = ''
+			this.#uiTitle.style.cursor = ''
 
 			if (hasMoved) {
 				this.panel.controller.foldable.set(
@@ -280,15 +419,15 @@ export default class Debug {
 			document.removeEventListener('mousemove', move)
 		}
 
-		this._uiTitle.addEventListener('mousedown', handleMouseDown)
-		this._uiTitle.addEventListener('mouseup', handleMouseUp)
+		this.#uiTitle.addEventListener('mousedown', handleMouseDown)
+		this.#uiTitle.addEventListener('mouseup', handleMouseUp)
 	}
 
 	/**
 	 * Set the resize event on the panel
 	 */
-	private _setResizeEvent() {
-		this._uiContainer.style.minWidth = '280px'
+	#setResizeEvent() {
+		this.#uiContainer.style.minWidth = '280px'
 
 		const styleElement = document.createElement('style')
 		styleElement.innerHTML = `
@@ -301,14 +440,14 @@ export default class Debug {
 
 		const horizontalResizeElement = document.createElement('div')
 		horizontalResizeElement.classList.add('horizontal-resize')
-		this._uiContainer.appendChild(horizontalResizeElement)
+		this.#uiContainer.appendChild(horizontalResizeElement)
 		horizontalResizeElement.addEventListener('mousedown', (event) => {
-			this._uiContainer.style.pointerEvents = 'none'
+			this.#uiContainer.style.pointerEvents = 'none'
 			const clickTargetX = event.clientX
-			const clickTargetWidth = this._uiContainer.clientWidth
+			const clickTargetWidth = this.#uiContainer.clientWidth
 
 			const handleMouseMove = ({ clientX }: MouseEvent) => {
-				this._uiContainer.style.width = `${
+				this.#uiContainer.style.width = `${
 					clickTargetWidth - (clientX - clickTargetX)
 				}px`
 			}
@@ -316,7 +455,7 @@ export default class Debug {
 			const handleMouseUp = () => {
 				document.removeEventListener('mousemove', handleMouseMove)
 				document.removeEventListener('mouseup', handleMouseUp)
-				this._uiContainer.style.pointerEvents = ''
+				this.#uiContainer.style.pointerEvents = ''
 			}
 
 			document.addEventListener('mousemove', handleMouseMove)
@@ -325,9 +464,18 @@ export default class Debug {
 	}
 
 	/**
+	 * Check if the id is active
+	 * @param id ID of the binding
+	 * @returns True if the id is active
+	 */
+	#isActive(id: string): boolean {
+		return document.querySelectorAll(`.${id}`).length > 1
+	}
+
+	/**
 	 * Set the reset button on the panels bindings
 	 */
-	private _setResetButton() {
+	#setResetButton() {
 		const resetButton = document.createElement('button')
 		resetButton.classList.add('tp-reset-button')
 		const styleElement = document.createElement('style')
@@ -353,12 +501,16 @@ export default class Debug {
 		document.head.appendChild(styleElement)
 		resetButton.innerHTML = `↺`
 
-		const handleSave = (state: BladeState) => this._handleLocalSave(state)
-		const getDefaultState = (state: BladeState) => this._handleLocalValue(state)
-		const tagsList: string[] = []
-		const getStateTag = (state: BladeState) => this._getStateTag(state)
+		const handleSave = (id: string, state: BladeState) =>
+			this.#handleLocalSave(id, state)
+		const handleUnsave = (id: string) => this.#handleLocalUnsave(id)
+		const getDefaultState = (id: string) => this.#handleLocalValue(id)
+		const isActive = (id: string) => this.#isActive(id)
+		const getStackId = async (state: BladeState, element: HTMLElement) => {
+			return await this.#getStackID(state, element)
+		}
 
-		this._pool.createBindingApi = (function (original) {
+		this.#pool.createBindingApi = (function (original) {
 			return function (bc) {
 				const valueElement = bc.view.valueElement
 				valueElement.style.position = 'relative'
@@ -366,96 +518,127 @@ export default class Debug {
 				const clonedResetButton = resetButton.cloneNode(true) as HTMLElement
 				valueElement.appendChild(clonedResetButton)
 
-				const initialValue = bc.valueController.value.rawValue
-				const initialState: any = bc.exportState()
-				bc.tag = getStateTag(initialState)
+				window.requestAnimationFrame(() => {
+					const initial = { state: copyObject(bc.exportState()) }
 
-				if (tagsList.includes(bc.tag)) {
-					console.warn(
-						`The tag "${bc.tag}" is already used in the session storage`,
-						bc
-					)
-				} else {
-					tagsList.push(bc.tag)
-				}
+					// Wait the panel to build element
+					const element = bc.view.element
+					getStackId(initial.state, element).then((id) => {
+						if (!id) return
+						element.id = id
+						element.classList.add(id)
 
-				bc.value.emitter.on('change', (e) => {
-					if (JSON.stringify(e.rawValue) === JSON.stringify(initialValue)) {
-						clonedResetButton.style.color = '#65656e'
-					} else {
-						clonedResetButton.style.color = 'var(--btn-bg-a)'
-					}
+						if (isActive(id)) {
+							console.warn(
+								`The debug "${initial.state?.title}" is already used in the session storage`,
+								bc
+							)
+						}
 
-					handleSave(bc.exportState())
-				})
+						/**
+						 * Handle reset button color
+						 * @param value Value of the binding
+						 */
+						const handleResetButton = (value: any) => {
+							const binding = initial.state?.binding as any
 
-				const defaultState = getDefaultState(initialState)
-				if (defaultState) bc.importState(defaultState)
+							if (JSON.stringify(value) === JSON.stringify(binding?.value)) {
+								clonedResetButton.style.color = '#65656e'
+							} else {
+								clonedResetButton.style.color = 'var(--btn-bg-a)'
+							}
+						}
 
-				clonedResetButton.addEventListener('click', () => {
-					bc.valueController.value.setRawValue(initialValue)
+						// Default state
+						const defaultState = getDefaultState(id)
+						if (defaultState) {
+							bc.importState(defaultState)
+							handleSave(id, bc.exportState())
+							handleResetButton(defaultState.binding.value)
+						}
+
+						// Handle changes
+						bc.value.emitter.on('change', (e) => {
+							handleSave(id, bc.exportState())
+							handleResetButton(e.rawValue)
+						})
+
+						// Trigger onLoad if needed
+						const binding = (bc.valueController.value as any).binding
+						const onLoad = binding?.target?.obj_?.onLoad
+						if (onLoad && typeof onLoad === 'function') onLoad()
+
+						// Click event
+						clonedResetButton.addEventListener('click', () => {
+							initial.state && bc.importState(initial.state)
+							handleUnsave(id)
+						})
+					})
 				})
 
 				// @ts-ignore
 				return original.apply(this, arguments)
 			}
-		})(this._pool.createBindingApi)
-	}
-
-	/**
-	 * Get the state tag
-	 * @param state State of the binding
-	 * @returns State tag
-	 */
-	private _getStateTag(state: any): string {
-		if (!state.tag) {
-			const key = state.binding?.key
-			const parsedLabel = state.label?.toLowerCase().replace(/ /g, '-')
-
-			if (key !== state.label) {
-				return `${state.binding?.key}-${parsedLabel}`
-			} else {
-				return `${key}`
-			}
-		}
-
-		return state.tag
+		})(this.#pool.createBindingApi)
 	}
 
 	/**
 	 * Handle local save
+	 * @param id ID of the binding
 	 * @param state State of the binding
 	 */
-	private _handleLocalSave(state: any, key?: string) {
+	#handleLocalSave(id: string, state: any) {
 		const current = sessionStorage.getItem('debugParams')
 		const res = current ? JSON.parse(current) : {}
-		const tag = key ?? this._getStateTag(state)
 
-		if (tag) {
-			res[tag] = state
+		if (id) {
+			res[id] = state
 			sessionStorage.setItem('debugParams', JSON.stringify(res))
+		} else {
+			console.warn('The key is not defined', state)
+		}
+	}
+
+	/**
+	 * Handle local unsave
+	 * @param id ID of the binding
+	 */
+	#handleLocalUnsave(id: string) {
+		const current = sessionStorage.getItem('debugParams')
+		if (!current) return
+
+		if (id) {
+			const values = JSON.parse(current)
+			delete values[id]
+			sessionStorage.setItem('debugParams', JSON.stringify(values))
+		} else {
+			console.warn('Id is not defined')
 		}
 	}
 
 	/**
 	 * Handle default local value
-	 * @param state State of the binding
+	 * @param id ID of the binding
 	 * @returns Default local value
 	 */
-	private _handleLocalValue(state: any, key?: string): any {
+	#handleLocalValue(id: string): any {
 		const current = sessionStorage.getItem('debugParams')
 		if (!current) return
 
 		const values = JSON.parse(current)
-		const tag = key ?? this._getStateTag(state)
+		const res = values[id]
 
-		if (tag) return values[tag]
+		if (defined(res?.disabled)) {
+			res.disabled = false
+		}
+
+		if (id) return res
 	}
 
 	/**
 	 * Set the debug manager
 	 */
-	private _setDebugManager() {
+	#setDebugManager() {
 		const debugManager = this.panel.addFolder({
 			title: 'Debug Feature Manager',
 			expanded: false,
@@ -468,69 +651,69 @@ export default class Debug {
 					case 'Stats':
 						if (this.debugParams.Stats) {
 							this.stats?.enable()
-							this._monitoring.style.display = 'flex'
+							this.#monitoring.style.display = 'flex'
 						} else {
 							this.stats?.disable()
-							this._monitoring.style.display = 'none'
+							this.#monitoring.style.display = 'none'
 						}
 					case 'LoadingScreen':
 						const loadingScreen = this.debugParams.LoadingScreen
-						this._experience.store.loadingScreen = loadingScreen
+						this.#experience.store.loadingScreen = loadingScreen
 					case 'Landing':
 						const landing = this.debugParams.Landing
-						this._experience.store.landing = landing
+						this.#experience.store.landing = landing
 				}
 			})
 		)
 
-		this._experience.store.loadingScreen = this.debugParams.LoadingScreen
-		this._experience.store.landing = this.debugParams.Landing
+		this.#experience.store.loadingScreen = this.debugParams.LoadingScreen
+		this.#experience.store.landing = this.debugParams.Landing
 	}
 
 	/**
 	 * Set the stats panel
 	 */
-	private _setStats() {
+	#setStats() {
 		this.stats = new Stats(this.debugParams.Stats)
 	}
 
 	/**
 	 * Set the monitoring panel
 	 */
-	private _setMonitoring() {
+	#setMonitoring() {
 		const monitoringValues: Array<TMonitoringValue> = [
 			{
 				name: 'Calls',
-				value: () => this._experience.renderer.instance.info.render.calls,
+				value: () => this.#experience.renderer.instance.info.render.calls,
 			},
 			{
 				name: 'Triangles',
-				value: () => this._experience.renderer.instance.info.render.triangles,
+				value: () => this.#experience.renderer.instance.info.render.triangles,
 			},
 			{
 				name: 'Lines',
-				value: () => this._experience.renderer.instance.info.render.lines,
+				value: () => this.#experience.renderer.instance.info.render.lines,
 			},
 			{
 				name: 'Points',
-				value: () => this._experience.renderer.instance.info.render.points,
+				value: () => this.#experience.renderer.instance.info.render.points,
 			},
 			{
 				name: 'Geometries',
-				value: () => this._experience.renderer.instance.info.memory.geometries,
+				value: () => this.#experience.renderer.instance.info.memory.geometries,
 			},
 			{
 				name: 'Materials',
-				value: () => this._experience.renderer.instance.info.programs?.length,
+				value: () => this.#experience.renderer.instance.info.programs?.length,
 			},
 			{
 				name: 'Textures',
-				value: () => this._experience.renderer.instance.info.memory.textures,
+				value: () => this.#experience.renderer.instance.info.memory.textures,
 			},
 		]
 
-		this._monitoring = document.createElement('section')
-		Object.assign(this._monitoring.style, {
+		this.#monitoring = document.createElement('section')
+		Object.assign(this.#monitoring.style, {
 			position: 'fixed',
 			bottom: '1rem',
 			left: '1rem',
@@ -547,12 +730,12 @@ export default class Debug {
 			monitoringValueElement.id = monitoringValue.name.toLowerCase()
 
 			monitoringValue.element = monitoringValueElement
-			this._monitoring.appendChild(monitoringValueElement)
+			this.#monitoring.appendChild(monitoringValueElement)
 		})
 
-		document.body.appendChild(this._monitoring)
+		document.body.appendChild(this.#monitoring)
 
-		this._statsValues = {
+		this.#statsValues = {
 			monitoringValues,
 			update: () => {
 				this.stats?.update()
@@ -564,21 +747,5 @@ export default class Debug {
 				})
 			},
 		}
-	}
-
-	/**
-	 * Unset the stats panel
-	 */
-	public dispose() {
-		this.panel.dispose()
-		this.stats?.dispose()
-		this._monitoring?.remove()
-	}
-
-	/**
-	 * Update the debug panel
-	 */
-	public update() {
-		if (this.debugParams.Stats) this._statsValues?.update()
 	}
 }

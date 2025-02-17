@@ -1,17 +1,13 @@
 import { BoxGeometry, MathUtils, Mesh, MeshNormalMaterial } from 'three'
 import { UIBtn } from '#components'
 import type ScrollManager from '~/utils/ScrollManager'
-import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem/'
-import { ExtendableItemEvents } from '~/webgl/Modules/Extendables/ExtendableItem/ExtendableItemEvents'
+import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem'
 
-export default class SharedCube
-	extends ExtendableItem
-	implements ExtendableItemEvents
-{
-	private _scrollManager: ScrollManager
-	private _geometry?: BoxGeometry
-	private _material?: MeshNormalMaterial
-	private _mesh?: Mesh
+export default class SharedCube extends ExtendableItem {
+	#scrollManager: ScrollManager
+	#geometry?: BoxGeometry
+	#material?: MeshNormalMaterial
+	#mesh?: Mesh
 
 	/**
 	 * Constructor
@@ -20,7 +16,7 @@ export default class SharedCube
 		super()
 
 		// Get elements from experience
-		this._scrollManager = this.experience.scrollManager
+		this.#scrollManager = this.experience.scrollManager
 
 		// New elements
 		this.holdDuration = 2000
@@ -29,37 +25,42 @@ export default class SharedCube
 		//     position: { x: 0, y: 0.5, z: 0 },
 		//   }),
 		// }
+
+		this.on('hold', (success: boolean) => this.#onHold(success))
+		this.on('click', () => this.#onClick())
+		this.on('update', () => this.#onUpdate())
+		this.on('load', () => this.#onLoad())
 	}
 
 	/**
 	 * Set geometry
 	 */
 	public setGeometry() {
-		this._geometry = new BoxGeometry(5, 5, 5)
+		this.#geometry = new BoxGeometry(5, 5, 5)
 	}
 
 	/**
 	 * Set material
 	 */
 	public setMaterial() {
-		this._material = new MeshNormalMaterial({ wireframe: true })
+		this.#material = new MeshNormalMaterial({ wireframe: true })
 	}
 
 	/**
 	 * Set mesh
 	 */
 	public setMesh() {
-		this._mesh = new Mesh(this._geometry, this._material)
+		this.#mesh = new Mesh(this.#geometry, this.#material)
 	}
 
 	/**
 	 * Set item
 	 */
 	public setItem() {
-		this.item = this._mesh as Mesh
+		this.item.add(this.#mesh as Mesh)
 	}
 
-	public OnHold(success: boolean) {
+	#onHold(success: boolean) {
 		if (success) {
 			console.log(
 				'hold successfull with a duration of ',
@@ -74,22 +75,22 @@ export default class SharedCube
 	/**
 	 * On click item
 	 */
-	public OnClick() {
+	#onClick() {
 		console.log('clicked')
 	}
 
 	/**
 	 * Update the cube
 	 */
-	public OnUpdate() {
+	#onUpdate() {
 		this.item.rotation.y = MathUtils.lerp(
 			this.item.rotation.y,
-			this._scrollManager.current * 0.1,
+			this.#scrollManager.current * 0.1,
 			0.1
 		)
 	}
 
-	public OnInit(): void {
+	#onLoad(): void {
 		this.setGeometry()
 		this.setMaterial()
 		this.setMesh()
@@ -102,12 +103,8 @@ export default class SharedCube
 			position: this.item.position,
 			data: {
 				text: 'Click me',
-				onClick: () => this.OnClick(),
+				onClick: () => this.#onClick(),
 			},
 		})
-	}
-
-	public override OnDispose(): void {
-		super.OnDispose()
 	}
 }

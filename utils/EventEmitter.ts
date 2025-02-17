@@ -1,211 +1,96 @@
-type TName = {
-	original: string
-	value: string
-	namespace: string
-}
+import type { ArgumentTypes } from '~/models/functions/argumentTypes.model'
+import { defined } from './functions/defined'
 
-export default class EventEmitter {
+// Events list type
+type TEventsList<T extends string> = Record<T, (...args: any[]) => any>
+
+// Event name type, returning type string name
+type TEventName<
+	K extends TEventsList<keyof K extends string ? keyof K : never>
+> = keyof K
+
+// Event callback type
+type TEventCallback<
+	T extends TEventName<K>,
+	K extends TEventsList<keyof K extends string ? keyof K : never>
+> = (...args: ArgumentTypes<K[T]>) => ReturnType<K[T]>
+
+export default class EventEmitter<
+	K extends TEventsList<string> = TEventsList<string>
+> {
 	// Public
-	public callbacks: any
+	public callbacks: {
+		[key in TEventName<K>]?: TEventCallback<key, K>[]
+	}
 
 	/**
 	 * Constructor
 	 */
 	constructor() {
 		// Public
-		this.callbacks = {
-			base: {},
-		}
+		this.callbacks = {}
 	}
 
 	/**
 	 * Set callback for an event
-	 * @param _names Event names
+	 * @param name Event name
 	 * @param callback Callback
 	 */
-	public on(_names: string, callback: any): any {
-		// Errors
-		if (typeof _names === 'undefined' || _names === '') {
-			console.warn('wrong names')
-			return false
-		}
-
-		if (typeof callback === 'undefined') {
-			console.warn('wrong callback')
-			return false
-		}
-
-		// Resolve names
-		const names = this._resolveNames(_names)
-
-		// Each name
-		names.forEach((_name) => {
-			// Resolve name
-			const name = this._resolveName(_name)
-
-			// Create namespace if not exist
-			if (!(this.callbacks[name.namespace] instanceof Object)) {
-				this.callbacks[name.namespace] = {}
-			}
-
-			// Create callback if not exist
-			if (!(this.callbacks[name.namespace][name.value] instanceof Array)) {
-				this.callbacks[name.namespace][name.value] = []
-			}
-
-			// Add callback
-			this.callbacks[name.namespace][name.value].push(callback)
-		})
+	public on<T extends TEventName<K>>(
+		name: T,
+		callback: TEventCallback<T, K>
+	): this {
+		// Resolve name
+		this.callbacks[name] ??= []
+		this.callbacks[name].push(callback)
 
 		return this
 	}
 
 	/**
 	 * Off event
-	 * @param _names Event names
+	 * @param names Event names
 	 */
-	public off(_names: string): any {
-		// Errors
-		if (typeof _names === 'undefined' || _names === '') {
-			console.warn('wrong name')
-			return false
-		}
-
-		// Resolve names
-		const names = this._resolveNames(_names)
+	public off(names: TEventName<K> | TEventName<K>[]): this {
+		const keys = Array.isArray(names) ? names : [names]
 
 		// Each name
-		names.forEach((_name) => {
-			// Resolve name
-			const name = this._resolveName(_name)
-
-			// Remove namespace
-			if (name.namespace !== 'base' && name.value === '') {
-				delete this.callbacks[name.namespace]
-			}
-
-			// Remove specific callback in namespace
-			else {
-				// Default
-				if (name.namespace === 'base') {
-					// Try to remove from each namespace
-					for (const namespace in this.callbacks) {
-						if (
-							this.callbacks[namespace] instanceof Object &&
-							this.callbacks[namespace][name.value] instanceof Array
-						) {
-							delete this.callbacks[namespace][name.value]
-
-							// Remove namespace if empty
-							if (Object.keys(this.callbacks[namespace]).length === 0)
-								delete this.callbacks[namespace]
-						}
-					}
-				}
-
-				// Specified namespace
-				else if (
-					this.callbacks[name.namespace] instanceof Object &&
-					this.callbacks[name.namespace][name.value] instanceof Array
-				) {
-					delete this.callbacks[name.namespace][name.value]
-
-					// Remove namespace if empty
-					if (Object.keys(this.callbacks[name.namespace]).length === 0)
-						delete this.callbacks[name.namespace]
-				}
-			}
-		})
+		keys.forEach((key) => delete this.callbacks[key])
 
 		return this
 	}
 
 	/**
-	 * Trigger event
-	 * @param _name Event name
-	 * @param _args Event arguments
+	 * Off all events
 	 */
-	protected trigger(_name: string, _args?: any): any {
-		// Errors
-		if (typeof _name === 'undefined' || _name === '') {
-			console.warn('wrong name')
-			return false
+	public disposeEvents(): void {
+		// Dispose all events
+		Object.keys(this.callbacks).forEach((key) => this.off(key))
+	}
+
+	/**
+	 * Trigger event
+	 * @param name Event names
+	 * @param args Event arguments
+	 */
+	public trigger<T extends TEventName<K>>(
+		name: T,
+		args?: ArgumentTypes<K[T]>[number]
+	): this | ReturnType<TEventCallback<T, K>> {
+		// Check if the event exists
+		if (!this.callbacks[name]) {
+			return this
 		}
-
-		let finalResult: any
-		let result: any
-
 		// Default args
-		const args = !(_args instanceof Array) ? [_args] : _args
-
-		// Resolve names (should on have one event)
-		let name: TName = this._resolveName(this._resolveNames(_name)[0])
+		const argsArray = !Array.isArray(args) ? [args] : args
+		args = argsArray as ArgumentTypes<K[keyof K]>
 
 		// Default namespace
-		if (name.namespace === 'base') {
-			// Try to find callback in each namespace
-			for (const namespace in this.callbacks) {
-				if (
-					this.callbacks[namespace] instanceof Object &&
-					this.callbacks[namespace][name.value] instanceof Array
-				) {
-					this.callbacks[namespace][name.value].forEach((callback: any) => {
-						result = callback.apply(this, args)
+		let result: ReturnType<TEventCallback<T, K>> | undefined
+		this.callbacks[name]?.forEach((callback: TEventCallback<T, K>) => {
+			result = callback.apply(this, args)
+		})
 
-						if (typeof finalResult === 'undefined') {
-							finalResult = result
-						}
-					})
-				}
-			}
-		}
-
-		// Specified namespace
-		else if (this.callbacks[name.namespace] instanceof Object) {
-			if (name.value === '') {
-				console.warn('wrong name')
-				return this
-			}
-
-			this.callbacks[name.namespace][name.value].forEach((callback: any) => {
-				result = callback.apply(this, args)
-
-				if (typeof finalResult === 'undefined') finalResult = result
-			})
-		}
-
-		return finalResult
-	}
-
-	/**
-	 * Resolve multiple names and return an array of names
-	 * @param _names Event names
-	 */
-	private _resolveNames(_names: string): string[] {
-		let names: string | string[] = _names
-		names = names.replace(/[^a-zA-Z0-9 ,/.]/g, '')
-		names = names.replace(/[,/]+/g, ' ')
-
-		return names.split(' ')
-	}
-
-	/**
-	 * Resolve name and return an object with original, value and namespace
-	 * @param name Event name
-	 */
-	private _resolveName(name: string): TName {
-		const parts = name.split('.')
-		const newName = {
-			original: name,
-			value: parts[0],
-			namespace: 'base', // Base namespace
-		}
-
-		// Specified namespace
-		if (parts.length > 1 && parts[1] !== '') {
-			newName.namespace = parts[1]
-		}
-
-		return newName
+		return defined(result) ? (result as ReturnType<TEventCallback<T, K>>) : this
 	}
 }

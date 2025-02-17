@@ -7,9 +7,13 @@ import dpr from '~/utils/functions/dpr'
 import isTouch from '~/utils/functions/isTouch'
 import EventEmitter from './EventEmitter'
 
-export default class Viewport extends EventEmitter {
+export type TViewportEvents = {
+	resize: () => void
+}
+
+export default class Viewport extends EventEmitter<TViewportEvents> {
 	// Singleton
-	static _instance: Viewport
+	static instance: Viewport
 
 	// Public
 	public enableBus!: boolean
@@ -27,7 +31,7 @@ export default class Viewport extends EventEmitter {
 	public dpr!: number
 
 	// Private
-	private _handleResize: any
+	#handleResize: any
 
 	// Nuxt
 	private $bus: any
@@ -35,24 +39,24 @@ export default class Viewport extends EventEmitter {
 
 	/**
 	 * Constructor
-	 * @param _options Options
-	 * @param _options.enableBus Enable the bus (default: false)
+	 * @param options Options
+	 * @param options.enableBus Enable the bus (default: false)
 	 */
-	constructor(_options?: { enableBus?: boolean }) {
+	constructor(options?: { enableBus?: boolean }) {
 		super()
 
 		if (!window) return
-		if (Viewport._instance) {
-			return Viewport._instance
+		if (Viewport.instance) {
+			return Viewport.instance
 		}
-		Viewport._instance = this
+		Viewport.instance = this
 
 		// Public
-		this.enableBus = !!_options?.enableBus
+		this.enableBus = !!options?.enableBus
 
 		// Private
-		this._handleResize = this.resize.bind(this)
-		window.addEventListener('resize', this._handleResize, false)
+		this.#handleResize = this.resize.bind(this)
+		window.addEventListener('resize', this.#handleResize, false)
 
 		// Nuxt
 		this.$bus = useNuxtApp().$bus
@@ -85,16 +89,7 @@ export default class Viewport extends EventEmitter {
 	 */
 	public resize(): void {
 		this.setData()
-
-		if (this.enableBus) this.$bus.emit('resize')
 		this.trigger('resize')
-	}
-
-	/**
-	 * Destroy viewport
-	 */
-	public dispose(): void {
-		this.$bus.off('resize', this.resize)
-		window.removeEventListener('resize', this._handleResize, false)
+		if (this.enableBus) this.$bus.emit('resize')
 	}
 }
