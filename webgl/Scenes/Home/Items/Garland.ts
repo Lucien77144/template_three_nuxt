@@ -1,6 +1,6 @@
 import { Group, Mesh, Vector3 } from 'three'
 import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem'
-import Picture from './Picture'
+import Picture from './Picture/Picture'
 import { get3DSize } from '~/utils/functions/getSize'
 import type Experience from '~/webgl/Experience'
 import gsap from 'gsap'
@@ -52,9 +52,10 @@ export default class Garland extends ExtendableItem<Home> {
 		this.item.rotation.z += event.delta * 0.00025
 
 		this.#scrollEndTimeout && clearTimeout(this.#scrollEndTimeout)
-		this.#scrollEndTimeout = setTimeout(() => {
-			gsap.to(this, { rotationFactor: 1, duration: 2 })
-		}, 500)
+		this.#scrollEndTimeout = setTimeout(
+			() => gsap.to(this, { rotationFactor: 1, duration: 2 }),
+			500
+		)
 	}
 
 	/**
@@ -80,7 +81,8 @@ export default class Garland extends ExtendableItem<Home> {
 	 */
 	#onUpdate(): void {
 		if (this.rotationFactor > 0) {
-			this.item.rotation.z += 0.001 * this.rotationFactor
+			const factor = Math.floor(this.rotationFactor * 1000) * 0.001
+			this.item.rotation.z += factor * 0.001
 		}
 	}
 

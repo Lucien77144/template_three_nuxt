@@ -6,6 +6,13 @@ import { breakpoint, breakpoints } from '~/utils/functions/breakpoints'
 import dpr from '~/utils/functions/dpr'
 import isTouch from '~/utils/functions/isTouch'
 import EventEmitter from './EventEmitter'
+import { Vector2 } from 'three'
+import {
+	getMaxRatio,
+	getMinRatio,
+	getRatio,
+	scaleRatioToViewport,
+} from './functions/ratio'
 
 export type TViewportEvents = {
 	resize: () => void
@@ -63,13 +70,23 @@ export default class Viewport extends EventEmitter<TViewportEvents> {
 		this.$router = useNuxtApp().$router
 
 		// Init
-		this.setData()
+		this.#setData()
+	}
+
+	/**
+	 * Get the ratio as a Vector2 to fit the current viewport
+	 */
+	public get ratioVec2(): Vector2 {
+		const ratio = getMaxRatio(this.width, this.height)
+		const isHorizontal = this.width > this.height
+
+		return new Vector2(!isHorizontal ? 1 : ratio, isHorizontal ? 1 : ratio)
 	}
 
 	/**
 	 * Set data of the viewport
 	 */
-	public setData(): void {
+	#setData(): void {
 		this.debug = this.$router.currentRoute.value.href.includes('debug')
 		this.width = document.documentElement.clientWidth
 		this.height = document.documentElement.clientHeight
@@ -88,8 +105,16 @@ export default class Viewport extends EventEmitter<TViewportEvents> {
 	 * Resize
 	 */
 	public resize(): void {
-		this.setData()
+		this.#setData()
 		this.trigger('resize')
 		if (this.enableBus) this.$bus.emit('resize')
+	}
+
+	/**
+	 * Dispose
+	 */
+	public dispose(): void {
+		// Dispose events
+		this.disposeEvents()
 	}
 }

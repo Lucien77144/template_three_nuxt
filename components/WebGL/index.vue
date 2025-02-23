@@ -1,7 +1,7 @@
 <template>
 	<!-- Loader & Landing -->
 	<WebGLLoader v-if="loadingScreen" />
-	<WebGLLanding v-if="isLanding && !isStarted" @start="handleStart" />
+	<WebGLLanding @start="exp?.start()" />
 	<!--/ Loader & Landing -->
 
 	<!-- Content front of the experience -->
@@ -28,14 +28,10 @@
 <script setup lang="ts">
 import Experience from '~/webgl/Experience'
 
-// Bus
-const { $bus }: any = useNuxtApp()
-
 // Shallow Refs
 const exp = shallowRef<Experience | null>(null)
 
 // Refs
-const isStarted = ref<boolean>(false)
 const canvasRef = ref<HTMLCanvasElement>()
 const debugRef = ref<HTMLElement>()
 
@@ -43,19 +39,8 @@ const debugRef = ref<HTMLElement>()
 const route = useRoute()
 
 // Store
-const active = computed(() => useExperienceStore().active)
-const landing = computed(() => useExperienceStore().landing)
-const loadingScreen = computed(() => useExperienceStore().loadingScreen)
-
-// Computed
-const isLanding = computed(() => {
-	return !isStarted.value && landing.value
-})
-
-// Methods
-const handleStart = (value: boolean) => {
-	isStarted.value = value
-}
+const active = computed(() => !!useExperienceStore().active)
+const loadingScreen = computed(() => !!useExperienceStore().loadingScreen)
 
 // On component mounted, create the experience
 onMounted(() => {
@@ -64,21 +49,27 @@ onMounted(() => {
 		debugRef.value?.remove()
 	}
 
-	// Create the experience
-	exp.value = new Experience({
-		canvas: canvasRef.value,
-		debug: debugRef.value,
-		defaultScene: route.query.scene as string,
-		name: 'Everything disappears',
-	})
+	if (!exp.value) {
+		try {
+			exp.value = new Experience({
+				canvas: canvasRef.value,
+				debug: debugRef.value,
+				defaultScene: route.query.scene as string,
+				name: 'Everything disappears',
+			})
+		} catch (error) {
+			console.error(error)
+			setTimeout(() => window.location.reload(), 500)
+		}
+	}
+})
 
-	// Set started status
-	isStarted.value = !useExperienceStore().landing
-
-	// On component unmounted, dispose the experience
-	onUnmounted(() => {
-		exp.value?.dispose()
-	})
+// On component unmounted, dispose the experience
+onUnmounted(() => {
+	if (exp.value) {
+		exp.value.dispose()
+		exp.value = null
+	}
 })
 </script>
 

@@ -1,17 +1,16 @@
-import { BoxGeometry, Mesh, ShaderMaterial, Uniform } from 'three'
+import { MeshBasicMaterial, BoxGeometry, DoubleSide, Mesh } from 'three'
 import ExtendableItem from '~/webgl/Modules/Extendables/ExtendableItem'
 import type SandboxClone from '../../SandboxClone'
-import vertexShader from './shaders/vertexShader.vert?raw'
-import fragmentShader from './shaders/fragmentShader.frag?raw'
-import TestCubeScene from './Scenes/TestCubeScene'
-
+import Viewport from '~/utils/Viewport'
+import { getRatio, scaleRatioToViewport } from '~/utils/functions/ratio'
 export default class TestCube extends ExtendableItem<SandboxClone> {
 	// Public
 	public position: { x: number; y: number; z: number }
 
 	// Private
+	#viewport!: Viewport
 	#geometry?: BoxGeometry
-	#material?: ShaderMaterial
+	#material?: MeshBasicMaterial
 	#mesh?: Mesh
 
 	/**
@@ -22,19 +21,18 @@ export default class TestCube extends ExtendableItem<SandboxClone> {
 	constructor(options: { position: { x: number; y: number; z: number } }) {
 		super()
 
-		this.scenes = {
-			testCube: new TestCubeScene(),
-		}
+		// Private
+		this.#viewport = this.experience.viewport
 
 		// Public
 		this.holdDuration = 2000
 		this.position = options.position
 
 		// Events
-		this.on('load', () => this.onLoad())
-		this.on('click', () => this.onClick())
-		this.on('scroll', () => this.onScroll())
-		this.on('update', () => this.onUpdate())
+		this.on('load', () => this.#onLoad())
+		this.on('click', () => this.#onClick())
+		this.on('scroll', () => this.#onScroll())
+		this.on('resize', () => this.#onResize())
 	}
 
 	// --------------------------------
@@ -44,7 +42,7 @@ export default class TestCube extends ExtendableItem<SandboxClone> {
 	/**
 	 * On load
 	 */
-	public onLoad() {
+	#onLoad() {
 		this.#setGeometry()
 		this.#setMaterial()
 		this.#setMesh()
@@ -55,16 +53,41 @@ export default class TestCube extends ExtendableItem<SandboxClone> {
 	/**
 	 * On load
 	 */
-	public onClick() {
+	#onClick() {
 		console.log('click')
 	}
 
-	public onScroll() {
+	/**
+	 * On scroll
+	 */
+	#onScroll() {
 		this.#mesh!.rotation.y += 0.01
 	}
 
-	public onUpdate() {
-		this.#material!.uniforms.tDiffuse.value = this.scenes.testCube.rt.texture
+	/**
+	 * On resize
+	 */
+	#onResize() {
+		// Parameters
+		const params = this.#geometry!.parameters
+		const screenRatio = this.#viewport.ratio
+
+		// Face ratio
+		const faceRatio = getRatio(params.width, params.height)
+		const uFaceRatio = scaleRatioToViewport(faceRatio, screenRatio)
+
+		// Sides ratio
+		const sidesRatio = getRatio(params.depth, params.height)
+		const uSidesRatio = scaleRatioToViewport(sidesRatio, screenRatio)
+
+		// Top ratio
+		const topRatio = getRatio(params.width, params.depth)
+		const uTopRatio = scaleRatioToViewport(topRatio, screenRatio)
+
+		// Update uniforms
+		// this.#material!.uniforms.uFaceRatio.value = uFaceRatio
+		// this.#material!.uniforms.uSidesRatio.value = uSidesRatio
+		// this.#material!.uniforms.uTopRatio.value = uTopRatio
 	}
 
 	// --------------------------------
@@ -75,19 +98,17 @@ export default class TestCube extends ExtendableItem<SandboxClone> {
 	 * Set geometry
 	 */
 	#setGeometry() {
-		this.#geometry = new BoxGeometry(4, 4, 4)
+		this.#geometry = new BoxGeometry(8, 8, 8)
 	}
 
 	/**
 	 * Set material
 	 */
 	#setMaterial() {
-		this.#material = new ShaderMaterial({
-			vertexShader,
-			fragmentShader,
-			uniforms: {
-				tDiffuse: new Uniform(this.scenes.testCube.rt.texture),
-			},
+		this.#material = new MeshBasicMaterial({
+			color: 0x0000ff,
+			aoMapIntensity: 1,
+			side: DoubleSide,
 		})
 	}
 

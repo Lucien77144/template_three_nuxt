@@ -14,6 +14,7 @@ import Stats from './Stats'
 import { Pane } from 'tweakpane'
 import { defined } from '~/utils/functions/defined'
 import { copyObject } from '~/utils/functions/copyObject'
+import { hasChanged } from '~/utils/functions/hasChanged'
 
 type TMonitoringValue = {
 	name: string
@@ -36,11 +37,11 @@ type TDebugParams = {
 }
 
 const DEFAULT_SETTINGS: TDebugParams = {
-	SceneLogs: true,
-	ResourceLog: true,
+	SceneLogs: false,
+	ResourceLog: false,
 	Stats: true,
 	LoadingScreen: true,
-	Landing: true,
+	Landing: false,
 }
 
 /**
@@ -60,13 +61,20 @@ export default class Debug {
 	#statsValues?: TStatsValues
 	#monitoring!: HTMLElement
 	#self: any
+	#loading!: boolean
+	#controls: number
+	#readyControls: Array<string>
 
 	constructor() {
+		// Public
+		this.#controls = 0
+		this.#readyControls = []
+
 		// Private
 		this.#experience = new Experience()
 		this.#viewport = this.#experience.viewport
 
-		// Public
+		// Set the Debug
 		this.#setPanel()
 		this.#saveFolderState()
 		this.#setPlugins()
@@ -148,7 +156,9 @@ export default class Debug {
 
 		// Check if el is in the dom :
 		const isInDom = document.body.contains(el)
-		if (isInDom) return tag && hashString(res)
+		if (isInDom && tag) {
+			return hashString(res)
+		}
 	}
 
 	/**
@@ -199,6 +209,9 @@ export default class Debug {
 	 * Unset the stats panel
 	 */
 	public dispose() {
+		this.#controls = 0
+		this.#readyControls = []
+
 		this.panel.dispose()
 		this.stats?.dispose()
 		this.#monitoring?.remove()
@@ -222,7 +235,7 @@ export default class Debug {
 
 		// Set the container style
 		this.#uiContainer.style.position = 'fixed'
-		this.#uiContainer.style.zIndex = '1000'
+		this.#uiContainer.style.zIndex = '9999'
 		this.#uiContainer.style.userSelect = 'none'
 
 		// Set the content style
@@ -234,63 +247,81 @@ export default class Debug {
 	 * Save the folder state
 	 */
 	#saveFolderState() {
+		const getSavedState = (id: string, defaultState: BladeState) => {
+			return this.#handleLocalValue(id, defaultState)
+		}
+		const isActive = (id: string) => this.#isActive(id)
 		const getStackId = async (state: BladeState, element: HTMLElement) => {
 			return await this.#getStackID(state, element)
 		}
-		const handleSave = (id: string, state: BladeState) =>
-			this.#handleLocalSave(id, state)
-		const getDefaultState = (id: string) => this.#handleLocalValue(id)
-		const isActive = (id: string) => this.#isActive(id)
+		const handleSave = (
+			id: string,
+			state: BladeState,
+			defaultState: BladeState
+		) => {
+			this.#handleLocalSave(id, state, defaultState)
+		}
 
 		this.#pool.createApi = (function (original) {
 			return function (bc) {
 				if ((bc as FolderController).foldable) {
 					bc = bc as FolderController
 
-					const state = bc.exportState()
-					// disable animation
+					const initial = { state: bc.exportState() }
+
 					const el = bc.view.element
 					const contentEl = el.querySelector('.tp-fldv_c') as HTMLElement
-					if (contentEl) contentEl.style.transition = 'none'
+					if (contentEl) {
+						contentEl.style.transition = 'none'
+					}
 
 					// Check if the folder has no children
-					const childs = state?.children as any[]
+					const childs = initial.state?.children as any[]
 					if (defined(childs) && !childs.length) {
-						state.hidden = true
+						initial.state.hidden = true
 					}
 
 					// Used to prevent issues on scene changes
 					window.requestAnimationFrame(() => {
 						// Wait the panel to build element
 						const element = bc.view.element
-						getStackId(state, element).then((id) => {
+						getStackId(initial.state, element).then((id) => {
 							if (!id) return
 							element.id = id
 							element.classList.add(id)
 
 							if (isActive(id)) {
 								console.warn(
-									`The debug "${state.title}" is already used in the session storage`,
+									`The debug "${initial.state.title}" is already used in the session storage`,
 									bc
 								)
 							}
 
 							// Default state
-							const defaultState = getDefaultState(id)
-							const defaultChilds = defaultState?.children
-							if (defined(defaultChilds) && !defaultChilds.length) {
-								defaultState.hidden = true
+							const defaultState = getSavedState(id, bc.exportState())
+							if (defaultState) {
+								const defaultChilds = defaultState.children
+								if (defined(defaultChilds) && !defaultChilds.length) {
+									defaultState.hidden = true
+								}
+
+								bc.importState(defaultState)
 							}
-							if (defaultState) bc.importState(defaultState)
 
 							window.requestAnimationFrame(() => {
-								if (contentEl) contentEl.style.transition = ''
+								if (contentEl) {
+									contentEl.style.transition = ''
+
+									if ((defaultState || initial.state)?.expanded) {
+										contentEl.style.height = 'auto'
+									}
+								}
 							})
 
 							// Click event
 							bc.view.element.addEventListener('click', () => {
 								const state = bc.exportState()
-								handleSave(id, state)
+								handleSave(id, state, initial.state)
 							})
 						})
 					})
@@ -501,10 +532,15 @@ export default class Debug {
 		document.head.appendChild(styleElement)
 		resetButton.innerHTML = `↺`
 
-		const handleSave = (id: string, state: BladeState) =>
-			this.#handleLocalSave(id, state)
+		const handleSave = (
+			id: string,
+			state: BladeState,
+			defaultState: BladeState
+		) => this.#handleLocalSave(id, state, defaultState)
 		const handleUnsave = (id: string) => this.#handleLocalUnsave(id)
-		const getDefaultState = (id: string) => this.#handleLocalValue(id)
+		const getSavedState = (id: string, defaultState: BladeState) => {
+			return this.#handleLocalValue(id, defaultState)
+		}
 		const isActive = (id: string) => this.#isActive(id)
 		const getStackId = async (state: BladeState, element: HTMLElement) => {
 			return await this.#getStackID(state, element)
@@ -529,8 +565,10 @@ export default class Debug {
 						element.classList.add(id)
 
 						if (isActive(id)) {
+							const state = initial.state
+							const name = state?.title || state?.label || state?.tag
 							console.warn(
-								`The debug "${initial.state?.title}" is already used in the session storage`,
+								`The debug "${name}" is already used in the session storage`,
 								bc
 							)
 						}
@@ -550,16 +588,18 @@ export default class Debug {
 						}
 
 						// Default state
-						const defaultState = getDefaultState(id)
+						const defaultState = getSavedState(id, initial.state)
 						if (defaultState) {
 							bc.importState(defaultState)
-							handleSave(id, bc.exportState())
+							handleSave(id, bc.exportState(), initial.state)
 							handleResetButton(defaultState.binding.value)
 						}
 
 						// Handle changes
 						bc.value.emitter.on('change', (e) => {
-							handleSave(id, bc.exportState())
+							const state = bc.exportState()
+							state.disabled &&= false
+							handleSave(id, state, initial.state)
 							handleResetButton(e.rawValue)
 						})
 
@@ -587,15 +627,18 @@ export default class Debug {
 	 * @param id ID of the binding
 	 * @param state State of the binding
 	 */
-	#handleLocalSave(id: string, state: any) {
+	#handleLocalSave(id: string, state: any, defaultState: any) {
 		const current = sessionStorage.getItem('debugParams')
 		const res = current ? JSON.parse(current) : {}
 
+		delete state.children
+		const value = { state, defaultBinding: defaultState.binding }
+
 		if (id) {
-			res[id] = state
+			res[id] = value
 			sessionStorage.setItem('debugParams', JSON.stringify(res))
 		} else {
-			console.warn('The key is not defined', state)
+			console.warn('The key is not defined', value)
 		}
 	}
 
@@ -621,18 +664,35 @@ export default class Debug {
 	 * @param id ID of the binding
 	 * @returns Default local value
 	 */
-	#handleLocalValue(id: string): any {
+	#handleLocalValue(id: string, defaultState: any): any {
 		const current = sessionStorage.getItem('debugParams')
 		if (!current) return
 
-		const values = JSON.parse(current)
-		const res = values[id]
+		const value = JSON.parse(current)[id]
+
+		let res = value?.state
+		if (id && value) {
+			if (defined(defaultState.children)) {
+				res.children = defaultState.children
+			} else if (
+				value.defaultBinding &&
+				hasChanged(defaultState.binding, value.defaultBinding)
+			) {
+				console.info(
+					'%cℹ️ Debug values has been reset because of code changes. Previous values:',
+					'background-color: #08517e; font-weight: bold; padding: 0.1rem 0.3rem; border-radius: 0.3rem;',
+					value.state
+				)
+
+				res = defaultState
+			}
+		}
 
 		if (defined(res?.disabled)) {
 			res.disabled = false
 		}
 
-		if (id) return res
+		return res
 	}
 
 	/**
@@ -644,30 +704,45 @@ export default class Debug {
 			expanded: false,
 		})
 
+		const onStatsChange = () => {
+			if (this.debugParams.Stats) {
+				this.stats?.enable()
+				this.#monitoring.style.display = 'flex'
+			} else {
+				this.stats?.disable()
+				this.#monitoring.style.display = 'none'
+			}
+		}
+		const onLoadingScreenChange = () => {
+			const loadingScreen = this.debugParams.LoadingScreen
+			this.#experience.store.loadingScreen = loadingScreen
+		}
+
+		const onLandingChange = () => {
+			const landing = this.debugParams.Landing
+			this.#experience.store.landing = landing
+			this.#experience.start()
+		}
+
 		const keys = Object.keys(DEFAULT_SETTINGS) as Array<keyof TDebugParams>
 		keys.forEach((key) =>
 			debugManager.addBinding(this.debugParams, key).on('change', () => {
 				switch (key) {
 					case 'Stats':
-						if (this.debugParams.Stats) {
-							this.stats?.enable()
-							this.#monitoring.style.display = 'flex'
-						} else {
-							this.stats?.disable()
-							this.#monitoring.style.display = 'none'
-						}
+						onStatsChange()
 					case 'LoadingScreen':
-						const loadingScreen = this.debugParams.LoadingScreen
-						this.#experience.store.loadingScreen = loadingScreen
+						onLoadingScreenChange()
 					case 'Landing':
-						const landing = this.debugParams.Landing
-						this.#experience.store.landing = landing
+						onLandingChange()
 				}
 			})
 		)
 
-		this.#experience.store.loadingScreen = this.debugParams.LoadingScreen
-		this.#experience.store.landing = this.debugParams.Landing
+		window.requestAnimationFrame(() => {
+			onStatsChange()
+			onLoadingScreenChange()
+			onLandingChange()
+		})
 	}
 
 	/**
