@@ -26,7 +26,13 @@
 </template>
 
 <script setup lang="ts">
+import type { Post } from '~/models/sanity/post'
 import Experience from '~/webgl/Experience'
+
+// Query
+const query = groq`*[ _type == "post" && defined(slug.current) ] | order(_createdAt desc)`
+const { data: posts } = await useSanityQuery<Post[]>(query)
+console.log(posts)
 
 // Shallow Refs
 const exp = shallowRef<Experience | null>(null)

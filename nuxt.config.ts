@@ -14,9 +14,9 @@ export default defineNuxtConfig({
   },
 
   modules: [
+    '@nuxtjs/sanity',
     '@pinia/nuxt',
     '@nuxtjs/i18n',
-    '@nuxtjs/sanity',
     [
       '@nuxtjs/google-fonts',
       {
@@ -28,7 +28,6 @@ export default defineNuxtConfig({
       },
     ],
   ],
-
   i18n: {
     locales: [
       {
@@ -50,15 +49,6 @@ export default defineNuxtConfig({
     strategy: 'no_prefix', // don't add language to url
   },
 
-  components: [
-    {
-      path: '~/components/_UI',
-      pathPrefix: false,
-      prefix: 'UI',
-    },
-    '~/components',
-  ],
-
   sanity: {
     projectId: process.env.NUXT_SANITY_PROJECT_ID,
     dataset: process.env.NUXT_SANITY_DATASET,
@@ -70,6 +60,15 @@ export default defineNuxtConfig({
       stega: true,
     },
   },
+
+  components: [
+    {
+      path: '~/components/_UI',
+      pathPrefix: false,
+      prefix: 'UI',
+    },
+    '~/components',
+  ],
 
   compatibilityDate: '2024-11-16',
 })
